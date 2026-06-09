@@ -804,6 +804,7 @@
           <h1 id="petDetailName">寵物名</h1>
           <p id="petDetailInfo">種類 · 品種</p>
         </div>
+        <button class="btn btn-secondary btn-small" onclick="showEditPetModal()" id="editPetBtn">編輯</button>
         <button class="btn btn-danger btn-small" onclick="deletePet()" id="deletePetBtn">刪除</button>
       </div>
 
@@ -863,6 +864,7 @@
     let currentPet = null;
     let currentMonth = new Date().getMonth() + 1;
     let currentYear = new Date().getFullYear();
+    let currentPetEvents = [];
 
     // ============== INIT ==============
     document.addEventListener('DOMContentLoaded', () => {
@@ -1131,7 +1133,7 @@
           const petName = dashPetsMap[e.petId] || '';
           const time = e.datetime ? new Date(e.datetime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '';
           const emoji = e.type === 'vet' ? '🏥' : e.type === 'medicine' ? '💊' : '📅';
-          return '<div class="log-item" style="margin-bottom:8px"><div class="log-icon">' + emoji + '</div><div class="log-content"><div class="log-title">' + e.title + '</div><div class="log-meta">' + time + ' - ' + petName + '</div></div></div>';
+          return '<div class="log-item" style="margin-bottom:8px"><div class="log-icon">' + emoji + '</div><div class="log-content"><div class="log-title">' + e.title + '</div><div class="log-meta">' + time + ' - ' + petName + '</div></div><div style="display:flex;gap:8px"><button class="btn btn-secondary btn-small" onclick="showEditEventModal(\'' + e.eventId + '\')">編輯</button><button class="btn btn-danger btn-small" onclick="handleDeleteEvent(\'' + e.eventId + '\')">刪除</button></div></div>';
         }).join('');
         
         showModal('<h2 class="modal-title">📅 ' + dateStr + '</h2>' + eventsList + '<div class="modal-actions"><button class="btn btn-secondary" onclick="document.getElementById(\'modalOverlay\').classList.add(\'hidden\')">關閉</button><button class="btn btn-primary" onclick="showQuickAddEvent(\'' + dateStr + '\')">添加行程</button></div>');
@@ -1388,6 +1390,7 @@
         });
         const data = await response.json();
         events = data.events || [];
+        currentPetEvents = events; // Store for use in showDayEvents
       } catch (err) {}
       
       // Build calendar
@@ -1451,8 +1454,18 @@
     }
 
     function showDayEvents(dateStr) {
-      // For simplicity, just show add event modal with prefilled date
-      showAddEventModal(dateStr);
+      // Get events for this day from current pet
+      const dayEvents = currentPetEvents ? currentPetEvents.filter(e => e.datetime && e.datetime.startsWith(dateStr)) : [];
+      if (dayEvents.length === 0) {
+        showAddEventModal(dateStr);
+      } else {
+        let eventsList = dayEvents.map(e => {
+          const time = e.datetime ? new Date(e.datetime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '';
+          const emoji = e.type === 'vet' ? '🏥' : e.type === 'medicine' ? '💊' : '📅';
+          return '<div class="log-item" style="margin-bottom:8px"><div class="log-icon">' + emoji + '</div><div class="log-content"><div class="log-title">' + e.title + '</div><div class="log-meta">' + time + '</div></div><div style="display:flex;gap:8px"><button class="btn btn-secondary btn-small" onclick="showEditEventModalPet(\'' + e.eventId + '\')">編輯</button></div></div>';
+        }).join('');
+        showModal('<h2 class="modal-title">📅 ' + dateStr + '</h2>' + eventsList + '<div class="modal-actions"><button class="btn btn-secondary" onclick="document.getElementById(\'modalOverlay\').classList.add(\'hidden\')">關閉</button><button class="btn btn-primary" onclick="showAddEventModal(\'' + dateStr + '\')">添加行程</button></div>');
+      }
     }
 
     // ============== FOOD LOGS TAB ==============
@@ -1682,6 +1695,168 @@
       }
     }
 
+    function showEditPetModal() {
+      if (!currentPet) return;
+      showModal(`
+        <h2 class="modal-title">編輯寵物</h2>
+        <form onsubmit="handleEditPet(event)">
+          <div class="form-group">
+            <label class="form-label">寵物名 *</label>
+            <input type="text" class="form-input" id="editPetName" value="${currentPet.name || ''}" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">種類</label>
+            <select class="form-select" id="editPetType">
+              <option value="dog" ${currentPet.type === 'dog' ? 'selected' : ''}>🐕 狗</option>
+              <option value="cat" ${currentPet.type === 'cat' ? 'selected' : ''}>🐱 貓</option>
+              <option value="bird" ${currentPet.type === 'bird' ? 'selected' : ''}>🐦 鳥</option>
+              <option value="rabbit" ${currentPet.type === 'rabbit' ? 'selected' : ''}>🐰 兔</option>
+              <option value="other" ${currentPet.type === 'other' ? 'selected' : ''}>其他</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">品種</label>
+            <input type="text" class="form-input" id="editPetBreed" value="${currentPet.breed || ''}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">出生日期</label>
+            <input type="date" class="form-input" id="editPetBirthDate" value="${currentPet.birthDate || ''}">
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" onclick="document.getElementById('modalOverlay').classList.add('hidden')">取消</button>
+            <button type="submit" class="btn btn-primary">保存</button>
+          </div>
+        </form>
+      `);
+    }
+
+    async function handleEditPet(e) {
+      e.preventDefault();
+      
+      const name = document.getElementById('editPetName').value;
+      const type = document.getElementById('editPetType').value;
+      const breed = document.getElementById('editPetBreed').value;
+      const birthDate = document.getElementById('editPetBirthDate').value;
+      
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'updatePet', token: currentToken, petId: currentPet.petId, name, type, breed, birthDate })
+        });
+        const data = await response.json();
+        
+        if (data.error) {
+          showToast(data.error, 'error');
+        } else {
+          document.getElementById('modalOverlay').classList.add('hidden');
+          showToast('寵物已更新！', 'success');
+          // Update local pet data
+          currentPet.name = name;
+          currentPet.type = type;
+          currentPet.breed = breed;
+          currentPet.birthDate = birthDate;
+          // Refresh pet detail view
+          const emoji = type === 'cat' ? '🐱' : type === 'bird' ? '🐦' : type === 'rabbit' ? '🐰' : '🐕';
+          document.getElementById('petDetailImage').textContent = emoji;
+          document.getElementById('petDetailName').textContent = name;
+          document.getElementById('petDetailInfo').textContent = `${type || '未知'} · ${breed || '未知'}`;
+          loadPets();
+        }
+      } catch (err) {
+        showToast('錯誤，請稍後再試', 'error');
+      }
+    }
+
+    async function handleDeleteEvent(eventId) {
+      if (!confirm('確定要刪除這個事件嗎？')) return;
+      
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'deleteEvent', token: currentToken, eventId })
+        });
+        const data = await response.json();
+        
+        if (data.error) {
+          showToast(data.error, 'error');
+        } else {
+          document.getElementById('modalOverlay').classList.add('hidden');
+          showToast('事件已刪除', 'success');
+          loadDashCalendar();
+          loadTab('calendar');
+        }
+      } catch (err) {
+        showToast('錯誤，請稍後再試', 'error');
+      }
+    }
+
+    function showEditEventModal(eventId) {
+      const event = dashAllEvents.find(e => e.eventId === eventId);
+      if (!event) return;
+      
+      const dt = event.datetime ? event.datetime.replace('T', 'T') : '';
+      
+      showModal(`
+        <h2 class="modal-title">編輯事件</h2>
+        <form onsubmit="handleEditEvent(event, '${eventId}')">
+          <div class="form-group">
+            <label class="form-label">標題 *</label>
+            <input type="text" class="form-input" id="editEventTitle" value="${event.title || ''}" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">類型</label>
+            <select class="form-select" id="editEventType">
+              <option value="vet" ${event.type === 'vet' ? 'selected' : ''}>🏥 獸醫</option>
+              <option value="medicine" ${event.type === 'medicine' ? 'selected' : ''}>💊 藥物</option>
+              <option value="grooming" ${event.type === 'grooming' ? 'selected' : ''}>✂️ 梳毛/洗澡</option>
+              <option value="other" ${event.type === 'other' ? 'selected' : ''}>其他</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">日期時間 *</label>
+            <input type="datetime-local" class="form-input" id="editEventDatetime" value="${dt}" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">備註</label>
+            <textarea class="form-input" id="editEventNotes" rows="3">${event.notes || ''}</textarea>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" onclick="document.getElementById('modalOverlay').classList.add('hidden')">取消</button>
+            <button type="button" class="btn btn-danger" onclick="handleDeleteEvent('${eventId}')">刪除</button>
+            <button type="submit" class="btn btn-primary">保存</button>
+          </div>
+        </form>
+      `);
+    }
+
+    async function handleEditEvent(e, eventId) {
+      e.preventDefault();
+      
+      const title = document.getElementById('editEventTitle').value;
+      const type = document.getElementById('editEventType').value;
+      const datetime = document.getElementById('editEventDatetime').value;
+      const notes = document.getElementById('editEventNotes').value;
+      
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'updateEvent', token: currentToken, eventId, title, type, datetime, notes })
+        });
+        const data = await response.json();
+        
+        if (data.error) {
+          showToast(data.error, 'error');
+        } else {
+          document.getElementById('modalOverlay').classList.add('hidden');
+          showToast('事件已更新！', 'success');
+          loadDashCalendar();
+          loadTab('calendar');
+        }
+      } catch (err) {
+        showToast('錯誤，請稍後再試', 'error');
+      }
+    }
+
     function showAddEventModal(prefilledDate) {
       const today = prefilledDate || new Date().toISOString().split('T')[0];
       showModal(`
@@ -1737,6 +1912,94 @@
           document.getElementById('modalOverlay').classList.add('hidden');
           showToast('事件添加成功！', 'success');
           loadTab('calendar');
+        }
+      } catch (err) {
+        showToast('錯誤，請稍後再試', 'error');
+      }
+    }
+
+    function showEditEventModalPet(eventId) {
+      const event = currentPetEvents.find(e => e.eventId === eventId);
+      if (!event) return;
+      
+      const dt = event.datetime ? event.datetime.replace('T', 'T') : '';
+      
+      showModal(`
+        <h2 class="modal-title">編輯事件</h2>
+        <form onsubmit="handleEditEventPet(event, '${eventId}')">
+          <div class="form-group">
+            <label class="form-label">標題 *</label>
+            <input type="text" class="form-input" id="editEventTitlePet" value="${event.title || ''}" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">類型</label>
+            <select class="form-select" id="editEventTypePet">
+              <option value="vet" ${event.type === 'vet' ? 'selected' : ''}>🏥 獸醫</option>
+              <option value="medicine" ${event.type === 'medicine' ? 'selected' : ''}>💊 藥物</option>
+              <option value="grooming" ${event.type === 'grooming' ? 'selected' : ''}>✂️ 梳毛/洗澡</option>
+              <option value="other" ${event.type === 'other' ? 'selected' : ''}>其他</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">日期時間 *</label>
+            <input type="datetime-local" class="form-input" id="editEventDatetimePet" value="${dt}" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">備註</label>
+            <textarea class="form-input" id="editEventNotesPet" rows="3">${event.notes || ''}</textarea>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" onclick="document.getElementById('modalOverlay').classList.add('hidden')">取消</button>
+            <button type="button" class="btn btn-danger" onclick="handleDeleteEventPet('${eventId}')">刪除</button>
+            <button type="submit" class="btn btn-primary">保存</button>
+          </div>
+        </form>
+      `);
+    }
+
+    async function handleEditEventPet(e, eventId) {
+      e.preventDefault();
+      
+      const title = document.getElementById('editEventTitlePet').value;
+      const type = document.getElementById('editEventTypePet').value;
+      const datetime = document.getElementById('editEventDatetimePet').value;
+      const notes = document.getElementById('editEventNotesPet').value;
+      
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'updateEvent', token: currentToken, eventId, title, type, datetime, notes })
+        });
+        const data = await response.json();
+        
+        if (data.error) {
+          showToast(data.error, 'error');
+        } else {
+          document.getElementById('modalOverlay').classList.add('hidden');
+          showToast('事件已更新！', 'success');
+          renderCalendar();
+        }
+      } catch (err) {
+        showToast('錯誤，請稍後再試', 'error');
+      }
+    }
+
+    async function handleDeleteEventPet(eventId) {
+      if (!confirm('確定要刪除這個事件嗎？')) return;
+      
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'deleteEvent', token: currentToken, eventId })
+        });
+        const data = await response.json();
+        
+        if (data.error) {
+          showToast(data.error, 'error');
+        } else {
+          document.getElementById('modalOverlay').classList.add('hidden');
+          showToast('事件已刪除', 'success');
+          renderCalendar();
         }
       } catch (err) {
         showToast('錯誤，請稍後再試', 'error');

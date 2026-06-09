@@ -90,6 +90,8 @@ function doPost(e) {
         return handleCreatePet(body, token);
       case 'deletePet':
         return handleDeletePet(body, token);
+      case 'updatePet':
+        return handleUpdatePet(body, token);
       
       // Events
       case 'getEvents':
@@ -98,6 +100,8 @@ function doPost(e) {
         return handleCreateEvent(body, token);
       case 'deleteEvent':
         return handleDeleteEvent(body, token);
+      case 'updateEvent':
+        return handleUpdateEvent(body, token);
       
       // Food Logs
       case 'getFoodLogs':
@@ -262,6 +266,38 @@ function handleDeletePet(body, token) {
   return returnJSON({ error: 'Pet not found' });
 }
 
+function handleUpdatePet(body, token) {
+  const user = validateUser(token);
+  if (!user) return returnJSON({ error: 'Unauthorized' });
+  
+  const { petId, name, type, breed, birthDate, photoUrl } = body;
+  
+  const sheet = getSheet('Pets');
+  const data = sheet.getDataRange().getValues();
+  const headers_arr = data[0];
+  
+  for (let i = 1; i < data.length; i++) {
+    const row = {};
+    headers_arr.forEach((h, idx) => row[h] = data[i][idx]);
+    if (row.petId === petId) {
+      if (user.role !== 'admin' && row.userId !== user.userId) {
+        return returnJSON({ error: 'Forbidden' });
+      }
+      
+      const sheetRow = i + 1;
+      if (name !== undefined) sheet.getRange(sheetRow, headers_arr.indexOf('name') + 1).setValue(name);
+      if (type !== undefined) sheet.getRange(sheetRow, headers_arr.indexOf('type') + 1).setValue(type);
+      if (breed !== undefined) sheet.getRange(sheetRow, headers_arr.indexOf('breed') + 1).setValue(breed);
+      if (birthDate !== undefined) sheet.getRange(sheetRow, headers_arr.indexOf('birthDate') + 1).setValue(birthDate);
+      if (photoUrl !== undefined) sheet.getRange(sheetRow, headers_arr.indexOf('photoUrl') + 1).setValue(photoUrl);
+      
+      return returnJSON({ success: true });
+    }
+  }
+  
+  return returnJSON({ error: 'Pet not found' });
+}
+
 // ============== EVENT HANDLERS ==============
 function handleGetEvents(body, token) {
   const user = validateUser(token);
@@ -337,6 +373,51 @@ function handleDeleteEvent(body, token) {
     headers_arr.forEach((h, idx) => row[h] = data[i][idx]);
     if (row.eventId === eventId) {
       sheet.deleteRow(i + 1);
+      return returnJSON({ success: true });
+    }
+  }
+  
+  return returnJSON({ error: 'Event not found' });
+}
+
+function handleUpdateEvent(body, token) {
+  const user = validateUser(token);
+  if (!user) return returnJSON({ error: 'Unauthorized' });
+  
+  const { eventId, title, type, datetime, notes } = body;
+  
+  const sheet = getSheet('Events');
+  const data = sheet.getDataRange().getValues();
+  const headers_arr = data[0];
+  
+  for (let i = 1; i < data.length; i++) {
+    const row = {};
+    headers_arr.forEach((h, idx) => row[h] = data[i][idx]);
+    if (row.eventId === eventId) {
+      // Check pet ownership
+      const petSheet = getSheet('Pets');
+      const petData = petSheet.getDataRange().getValues();
+      const petHeaders = petData[0];
+      let petUserId = null;
+      for (let j = 1; j < petData.length; j++) {
+        const pr = {};
+        petHeaders.forEach((h, idx) => pr[h] = petData[j][idx]);
+        if (pr.petId === row.petId) {
+          petUserId = pr.userId;
+          break;
+        }
+      }
+      
+      if (user.role !== 'admin' && petUserId !== user.userId) {
+        return returnJSON({ error: 'Forbidden' });
+      }
+      
+      const sheetRow = i + 1;
+      if (title !== undefined) sheet.getRange(sheetRow, headers_arr.indexOf('title') + 1).setValue(title);
+      if (type !== undefined) sheet.getRange(sheetRow, headers_arr.indexOf('type') + 1).setValue(type);
+      if (datetime !== undefined) sheet.getRange(sheetRow, headers_arr.indexOf('datetime') + 1).setValue(datetime);
+      if (notes !== undefined) sheet.getRange(sheetRow, headers_arr.indexOf('notes') + 1).setValue(notes);
+      
       return returnJSON({ success: true });
     }
   }
