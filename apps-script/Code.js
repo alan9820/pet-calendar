@@ -122,6 +122,8 @@ function doPost(e) {
         return handleAdminGetUsers(token);
       case 'adminGetAllData':
         return handleAdminGetAllData(token);
+      case 'adminDeleteUser':
+        return handleAdminDeleteUser(body, token);
       
       default:
         return returnJSON({ error: 'Unknown action: ' + action });
@@ -510,7 +512,60 @@ function handleAdminGetAllData(token) {
   return returnJSON(allData);
 }
 
-// ============== SETUP FUNCTION ==============
+// ============== ADMIN HANDLERS ==============
+function handleAdminDeleteUser(body, token) {
+  const user = validateUser(token);
+  if (!user || user.role !== 'admin') {
+    return returnJSON({ error: 'Admin only' });
+  }
+  
+  const { userId } = body;
+  if (!userId) {
+    return returnJSON({ error: 'Missing userId' });
+  }
+  
+  // Cannot delete yourself
+  if (userId === user.userId) {
+    return returnJSON({ error: 'Cannot delete yourself' });
+  }
+  
+  const sheet = getSheet('Users');
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  
+  for (let i = 1; i < data.length; i++) {
+    const row = {};
+    headers.forEach((h, idx) => row[h] = data[i][idx]);
+    if (row.userId === userId) {
+      sheet.deleteRow(i + 1);
+      
+      // Also delete all pets belonging to this user
+      const petsSheet = getSheet('Pets');
+      const petsData = petsSheet.getDataRange().getValues();
+      const petsHeaders = petsData[0];
+      const petsToDelete = [];
+      
+      for (let j = 1; j < petsData.length; j++) {
+        const petRow = {};
+        petsHeaders.forEach((h, idx) => petRow[h] = petsData[j][idx]);
+        if (petRow.userId === userId) {
+          petsToDelete.push(j + 1);
+        }
+      }
+      
+      // Delete in reverse order to avoid index shift
+      petsToDelete.reverse().forEach(rowNum => {
+        petsSheet.deleteRow(rowNum);
+      });
+      
+      return returnJSON({ success: true });
+    }
+  }
+  
+  return returnJSON({ error: 'User not found' });
+}
+
+
 function setupSpreadsheet() {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   
