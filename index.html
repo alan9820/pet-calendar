@@ -1780,21 +1780,25 @@
         } else {
           document.getElementById('modalOverlay').classList.add('hidden');
           showToast('寵物已更新！', 'success');
-          // Update local pet data
-          currentPet.name = name;
-          currentPet.type = type;
-          currentPet.breed = breed;
-          currentPet.birthDate = birthDate;
-          currentPet.photoUrl = photoUrl;
+          // Reload pet data from server
+          const petsResponse = await fetch(API_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'getPets', token: currentToken })
+          });
+          const petsData = await petsResponse.json();
+          const updatedPet = petsData.pets.find(p => p.petId === currentPet.petId);
+          if (updatedPet) {
+            currentPet = updatedPet;
+          }
           // Refresh pet detail view
-          if (photoUrl) {
-            document.getElementById('petDetailImage').innerHTML = `<img src="${photoUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+          if (currentPet.photoUrl) {
+            document.getElementById('petDetailImage').innerHTML = `<img src="${currentPet.photoUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
           } else {
-            const emoji = type === 'cat' ? '🐱' : type === 'bird' ? '🐦' : type === 'rabbit' ? '🐰' : '🐕';
+            const emoji = currentPet.type === 'cat' ? '🐱' : currentPet.type === 'bird' ? '🐦' : currentPet.type === 'rabbit' ? '🐰' : '🐕';
             document.getElementById('petDetailImage').textContent = emoji;
           }
-          document.getElementById('petDetailName').textContent = name;
-          document.getElementById('petDetailInfo').textContent = `${type || '未知'} · ${breed || '未知'}`;
+          document.getElementById('petDetailName').textContent = currentPet.name;
+          document.getElementById('petDetailInfo').textContent = `${currentPet.type || '未知'} · ${currentPet.breed || '未知'}`;
           loadPets();
         }
       } catch (err) {
