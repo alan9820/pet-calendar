@@ -1,0 +1,1764 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pet Calendar - 寵物行事曆</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    :root {
+      --primary: #6B9B37;
+      --primary-dark: #5A8A2E;
+      --secondary: #F5E6D3;
+      --accent: #E8A87C;
+      --background: #FDF8F3;
+      --surface: #FFFFFF;
+      --text: #2D3436;
+      --text-light: #636E72;
+      --error: #E74C3C;
+      --success: #27AE60;
+      --shadow: 0 4px 20px rgba(0,0,0,0.08);
+      --radius: 16px;
+    }
+    
+    body {
+      font-family: 'Nunito', sans-serif;
+      background: var(--background);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    
+    /* Header */
+    .header {
+      background: var(--surface);
+      padding: 16px 24px;
+      box-shadow: var(--shadow);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.4em;
+      font-weight: 800;
+      color: var(--primary);
+    }
+    
+    .logo span {
+      font-size: 1.6em;
+    }
+    
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .user-name {
+      font-weight: 600;
+      color: var(--text);
+    }
+    
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: var(--radius);
+      font-family: inherit;
+      font-weight: 600;
+      font-size: 0.95em;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: var(--primary-dark);
+      transform: translateY(-2px);
+    }
+    
+    .btn-secondary {
+      background: var(--secondary);
+      color: var(--text);
+    }
+    
+    .btn-secondary:hover {
+      background: #EDD9C0;
+    }
+    
+    .btn-danger {
+      background: var(--error);
+      color: white;
+    }
+    
+    .btn-small {
+      padding: 6px 12px;
+      font-size: 0.85em;
+    }
+    
+    /* Container */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    
+    /* Auth Views */
+    .auth-container {
+      min-height: calc(100vh - 80px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    
+    .auth-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 40px;
+      width: 100%;
+      max-width: 420px;
+    }
+    
+    .auth-title {
+      text-align: center;
+      font-size: 1.8em;
+      font-weight: 800;
+      color: var(--primary);
+      margin-bottom: 8px;
+    }
+    
+    .auth-subtitle {
+      text-align: center;
+      color: var(--text-light);
+      margin-bottom: 32px;
+    }
+    
+    .form-group {
+      margin-bottom: 20px;
+    }
+    
+    .form-label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+    
+    .form-input {
+      width: 100%;
+      padding: 14px 16px;
+      border: 2px solid #E0E0E0;
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 1em;
+      transition: border-color 0.2s;
+    }
+    
+    .form-input:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+    
+    .form-error {
+      color: var(--error);
+      font-size: 0.9em;
+      margin-top: 8px;
+    }
+    
+    .auth-footer {
+      text-align: center;
+      margin-top: 24px;
+      color: var(--text-light);
+    }
+    
+    .auth-link {
+      color: var(--primary);
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+    
+    /* Dashboard */
+    .dashboard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+    
+    .dashboard-title {
+      font-size: 1.6em;
+      font-weight: 800;
+    }
+    
+    .pets-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+    }
+    
+    .pet-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    
+    .pet-card:hover {
+      transform: translateY(-4px);
+    }
+    
+    .pet-card-image {
+      width: 100%;
+      height: 180px;
+      background: var(--secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 4em;
+    }
+    
+    .pet-card-content {
+      padding: 20px;
+    }
+    
+    .pet-card-name {
+      font-size: 1.3em;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    
+    .pet-card-info {
+      color: var(--text-light);
+      font-size: 0.9em;
+    }
+    
+    .add-pet-card {
+      background: var(--secondary);
+      border: 3px dashed var(--primary);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 280px;
+      cursor: pointer;
+    }
+    
+    .add-pet-card:hover {
+      background: #EDD9C0;
+    }
+    
+    .add-pet-icon {
+      font-size: 3em;
+      color: var(--primary);
+      margin-bottom: 8px;
+    }
+    
+    .add-pet-text {
+      font-weight: 600;
+      color: var(--primary);
+    }
+    
+    /* Pet Detail View */
+    .pet-header {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      margin-bottom: 24px;
+      background: var(--surface);
+      padding: 24px;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    
+    .pet-header-image {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      background: var(--secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3em;
+    }
+    
+    .pet-header-info h1 {
+      font-size: 1.8em;
+      font-weight: 800;
+    }
+    
+    .pet-header-info p {
+      color: var(--text-light);
+    }
+    
+    .back-btn {
+      margin-right: auto;
+      background: none;
+      border: none;
+      font-size: 1.5em;
+      cursor: pointer;
+      padding: 8px;
+    }
+    
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      overflow-x: auto;
+      padding-bottom: 8px;
+    }
+    
+    .tab {
+      padding: 12px 20px;
+      background: var(--surface);
+      border: none;
+      border-radius: var(--radius);
+      font-family: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    
+    .tab.active {
+      background: var(--primary);
+      color: white;
+    }
+    
+    .tab:hover:not(.active) {
+      background: var(--secondary);
+    }
+    
+    /* Tab Content */
+    .tab-content {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 24px;
+    }
+    
+    .tab-title {
+      font-size: 1.3em;
+      font-weight: 700;
+      margin-bottom: 20px;
+    }
+    
+    /* Calendar */
+    .calendar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    
+    .calendar-nav {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .calendar-month {
+      font-size: 1.2em;
+      font-weight: 700;
+    }
+    
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+    }
+    
+    .calendar-day-header {
+      text-align: center;
+      font-weight: 600;
+      color: var(--text-light);
+      padding: 8px;
+      font-size: 0.85em;
+    }
+    
+    .calendar-day {
+      aspect-ratio: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 4px;
+      border-radius: 8px;
+      cursor: pointer;
+      background: var(--background);
+      transition: all 0.2s;
+      font-size: 0.85em;
+    }
+    
+    .calendar-day:hover {
+      background: var(--secondary);
+    }
+    
+    .calendar-day.today {
+      background: var(--primary);
+      color: white;
+    }
+    
+    .calendar-day.other-month {
+      color: #CCC;
+    }
+    
+    .calendar-day .event-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      margin-top: 2px;
+    }
+    
+    .calendar-day .event-dot.vet {
+      background: var(--error);
+    }
+    
+    .calendar-day .event-dot.food {
+      background: var(--success);
+    }
+    
+    .calendar-day .event-dot.poop {
+      background: #8B4513;
+    }
+    
+    /* Log List */
+    .log-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    
+    .log-item {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px;
+      background: var(--background);
+      border-radius: 12px;
+    }
+    
+    .log-icon {
+      font-size: 1.8em;
+      width: 50px;
+      text-align: center;
+    }
+    
+    .log-content {
+      flex: 1;
+    }
+    
+    .log-title {
+      font-weight: 600;
+    }
+    
+    .log-meta {
+      font-size: 0.85em;
+      color: var(--text-light);
+    }
+    
+    .log-score {
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-weight: 700;
+      font-size: 0.9em;
+    }
+    
+    .log-score.good {
+      background: #D5F5E3;
+      color: var(--success);
+    }
+    
+    .log-score.bad {
+      background: #FADBD8;
+      color: var(--error);
+    }
+    
+    .log-score.neutral {
+      background: #FDEBD0;
+      color: var(--accent);
+    }
+    
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 24px;
+    }
+    
+    .modal-overlay.hidden {
+      display: none;
+    }
+    
+    .modal {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 32px;
+      width: 100%;
+      max-width: 480px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    
+    .modal-title {
+      font-size: 1.4em;
+      font-weight: 700;
+      margin-bottom: 24px;
+    }
+    
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+      justify-content: flex-end;
+    }
+    
+    /* Select */
+    .form-select {
+      width: 100%;
+      padding: 14px 16px;
+      border: 2px solid #E0E0E0;
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 1em;
+      background: white;
+      cursor: pointer;
+    }
+    
+    .form-select:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+    
+    /* Admin Panel */
+    .admin-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    
+    .admin-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    
+    .admin-table th,
+    .admin-table td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #E0E0E0;
+    }
+    
+    .admin-table th {
+      background: var(--background);
+      font-weight: 600;
+    }
+    
+    .admin-table tr:hover {
+      background: var(--background);
+    }
+    
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.8em;
+      font-weight: 600;
+    }
+    
+    .badge-admin {
+      background: var(--primary);
+      color: white;
+    }
+    
+    .badge-user {
+      background: var(--secondary);
+      color: var(--text);
+    }
+    
+    /* Loading */
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+    }
+    
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid var(--secondary);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      padding: 16px 24px;
+      background: var(--text);
+      color: white;
+      border-radius: var(--radius);
+      font-weight: 600;
+      z-index: 2000;
+      animation: slideIn 0.3s ease;
+    }
+    
+    .toast.success {
+      background: var(--success);
+    }
+    
+    .toast.error {
+      background: var(--error);
+    }
+    
+    @keyframes slideIn {
+      from {
+        transform: translateY(100px);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+    
+    /* Hidden */
+    .hidden {
+      display: none !important;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+      .header {
+        padding: 12px 16px;
+      }
+      
+      .container {
+        padding: 16px;
+      }
+      
+      .auth-card {
+        padding: 24px;
+      }
+      
+      .pet-header {
+        flex-direction: column;
+        text-align: center;
+      }
+      
+      .back-btn {
+        margin-right: 0;
+        margin-bottom: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header class="header" id="header">
+      <div class="logo">
+        <span>🐾</span>
+        Pet Calendar
+      </div>
+      <div class="user-info hidden" id="userInfo">
+        <span class="user-name" id="userName"></span>
+        <button class="btn btn-secondary btn-small" onclick="logout()">登出</button>
+      </div>
+    </header>
+
+    <!-- Auth: Login -->
+    <div class="auth-container" id="loginView">
+      <div class="auth-card">
+        <div class="auth-title">🐾 Pet Calendar</div>
+        <div class="auth-subtitle">登入你的帳戶</div>
+        
+        <form onsubmit="handleLogin(event)">
+          <div class="form-group">
+            <label class="form-label">電郵</label>
+            <input type="email" class="form-input" id="loginEmail" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">密碼</label>
+            <input type="password" class="form-input" id="loginPassword" required>
+          </div>
+          <div class="form-error hidden" id="loginError"></div>
+          <button type="submit" class="btn btn-primary" style="width:100%">登入</button>
+        </form>
+        
+        <div class="auth-footer">
+          還沒有帳戶？<span class="auth-link" onclick="showRegister()">立即註冊</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Auth: Register -->
+    <div class="auth-container hidden" id="registerView">
+      <div class="auth-card">
+        <div class="auth-title">🐾 加入我們</div>
+        <div class="auth-subtitle">創建你的寵物帳戶</div>
+        
+        <form onsubmit="handleRegister(event)">
+          <div class="form-group">
+            <label class="form-label">姓名</label>
+            <input type="text" class="form-input" id="registerName" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">電郵</label>
+            <input type="email" class="form-input" id="registerEmail" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">密碼</label>
+            <input type="password" class="form-input" id="registerPassword" required minlength="6">
+          </div>
+          <div class="form-group">
+            <label class="form-label">確認密碼</label>
+            <input type="password" class="form-input" id="registerConfirm" required>
+          </div>
+          <div class="form-error hidden" id="registerError"></div>
+          <button type="submit" class="btn btn-primary" style="width:100%">註冊</button>
+        </form>
+        
+        <div class="auth-footer">
+          已有帳戶？<span class="auth-link" onclick="showLogin()">登入</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div class="container hidden" id="dashboardView">
+      <div class="dashboard-header">
+        <h1 class="dashboard-title">我的寵物</h1>
+        <button class="btn btn-secondary" onclick="showAddPetModal()" id="addPetBtn">+ 添加寵物</button>
+      </div>
+      <div class="pets-grid" id="petsGrid">
+        <!-- Pets loaded dynamically -->
+      </div>
+    </div>
+
+    <!-- Pet Detail -->
+    <div class="container hidden" id="petDetailView">
+      <button class="btn btn-secondary" onclick="showDashboard()" style="margin-bottom:16px">← 返回</button>
+      
+      <div class="pet-header">
+        <button class="back-btn" onclick="showDashboard()">←</button>
+        <div class="pet-header-image" id="petDetailImage">🐕</div>
+        <div class="pet-header-info">
+          <h1 id="petDetailName">寵物名</h1>
+          <p id="petDetailInfo">種類 · 品種</p>
+        </div>
+        <button class="btn btn-danger btn-small" onclick="deletePet()" id="deletePetBtn">刪除</button>
+      </div>
+
+      <div class="tabs">
+        <button class="tab active" data-tab="calendar">📅 行事曆</button>
+        <button class="tab" data-tab="food">🍖 飲食</button>
+        <button class="tab" data-tab="poop">💩 大便</button>
+        <button class="tab" data-tab="health">💊 健康</button>
+      </div>
+
+      <div class="tab-content" id="tabContent">
+        <!-- Tab content loaded dynamically -->
+      </div>
+    </div>
+
+    <!-- Admin Panel -->
+    <div class="container hidden" id="adminView">
+      <div class="dashboard-header">
+        <h1 class="dashboard-title">👑 管理面板</h1>
+        <button class="btn btn-secondary" onclick="showDashboard()">返回</button>
+      </div>
+      
+      <div class="admin-tabs">
+        <button class="tab active" data-admin-tab="users">👥 用戶</button>
+        <button class="tab" data-admin-tab="allData">📊 所有數據</button>
+      </div>
+      
+      <div class="tab-content" id="adminContent">
+        <!-- Admin content loaded dynamically -->
+      </div>
+    </div>
+
+    <!-- Modals -->
+    <div class="modal-overlay hidden" id="modalOverlay" onclick="closeModal(event)">
+      <div class="modal" id="modalContent" onclick="event.stopPropagation()">
+        <!-- Modal content loaded dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ============== CONFIG ==============
+    // TODO: 替換為你的 Google Apps Script Web App URL
+    const API_URL = 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec';
+    
+    // ============== STATE ==============
+    let currentUser = null;
+    let currentToken = null;
+    let currentPet = null;
+    let currentMonth = new Date().getMonth() + 1;
+    let currentYear = new Date().getFullYear();
+
+    // ============== INIT ==============
+    document.addEventListener('DOMContentLoaded', () => {
+      // Check for saved token
+      const savedToken = localStorage.getItem('petCalendarToken');
+      const savedUser = localStorage.getItem('petCalendarUser');
+      
+      if (savedToken && savedUser) {
+        currentToken = savedToken;
+        currentUser = JSON.parse(savedUser);
+        showDashboard();
+      } else {
+        showLoginView();
+      }
+      
+      // Setup tabs
+      document.querySelectorAll('.tab[data-tab]').forEach(tab => {
+        tab.addEventListener('click', () => {
+          document.querySelectorAll('.tab[data-tab]').forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          loadTab(tab.dataset.tab);
+        });
+      });
+      
+      document.querySelectorAll('.tab[data-admin-tab]').forEach(tab => {
+        tab.addEventListener('click', () => {
+          document.querySelectorAll('.tab[data-admin-tab]').forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          loadAdminTab(tab.dataset.adminTab);
+        });
+      });
+    });
+
+    // ============== AUTH ==============
+    function showLoginView() {
+      document.getElementById('loginView').classList.remove('hidden');
+      document.getElementById('registerView').classList.add('hidden');
+      document.getElementById('dashboardView').classList.add('hidden');
+      document.getElementById('petDetailView').classList.add('hidden');
+      document.getElementById('adminView').classList.add('hidden');
+      document.getElementById('userInfo').classList.add('hidden');
+    }
+
+    function showRegister() {
+      document.getElementById('loginView').classList.add('hidden');
+      document.getElementById('registerView').classList.remove('hidden');
+    }
+
+    function showLogin() {
+      document.getElementById('registerView').classList.add('hidden');
+      document.getElementById('loginView').classList.remove('hidden');
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+      const errorEl = document.getElementById('loginError');
+      
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'login', email, password })
+        });
+        const data = await response.json();
+        
+        if (data.error) {
+          errorEl.textContent = data.error;
+          errorEl.classList.remove('hidden');
+        } else {
+          currentUser = data.user;
+          currentToken = data.token;
+          localStorage.setItem('petCalendarToken', data.token);
+          localStorage.setItem('petCalendarUser', JSON.stringify(data.user));
+          showDashboard();
+        }
+      } catch (err) {
+        errorEl.textContent = '連接錯誤，請稍後再試';
+        errorEl.classList.remove('hidden');
+      }
+    }
+
+    async function handleRegister(e) {
+      e.preventDefault();
+      const name = document.getElementById('registerName').value;
+      const email = document.getElementById('registerEmail').value;
+      const password = document.getElementById('registerPassword').value;
+      const confirm = document.getElementById('registerConfirm').value;
+      const errorEl = document.getElementById('registerError');
+      
+      if (password !== confirm) {
+        errorEl.textContent = '密碼不匹配';
+        errorEl.classList.remove('hidden');
+        return;
+      }
+      
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'register', name, email, password })
+        });
+        const data = await response.json();
+        
+        if (data.error) {
+          errorEl.textContent = data.error;
+          errorEl.classList.remove('hidden');
+        } else {
+          currentUser = data.user;
+          currentToken = data.token;
+          localStorage.setItem('petCalendarToken', data.token);
+          localStorage.setItem('petCalendarUser', JSON.stringify(data.user));
+          showToast('註冊成功！', 'success');
+          showDashboard();
+        }
+      } catch (err) {
+        errorEl.textContent = '連接錯誤，請稍後再試';
+        errorEl.classList.remove('hidden');
+      }
+    }
+
+    function logout() {
+      currentUser = null;
+      currentToken = null;
+      localStorage.removeItem('petCalendarToken');
+      localStorage.removeItem('petCalendarUser');
+      showLoginView();
+    }
+
+    // ============== DASHBOARD ==============
+    async function showDashboard() {
+      document.getElementById('loginView').classList.add('hidden');
+      document.getElementById('registerView').classList.add('hidden');
+      document.getElementById('dashboardView').classList.remove('hidden');
+      document.getElementById('petDetailView').classList.add('hidden');
+      document.getElementById('adminView').classList.add('hidden');
+      document.getElementById('userInfo').classList.remove('hidden');
+      
+      document.getElementById('userName').textContent = currentUser.name;
+      
+      // Show admin button if admin
+      if (currentUser.role === 'admin') {
+        document.getElementById('addPetBtn').outerHTML = `
+          <button class="btn btn-secondary" onclick="showAdmin()">👑 管理</button>
+          <button class="btn btn-primary" onclick="showAddPetModal()">+ 添加寵物</button>
+        `;
+      }
+      
+      await loadPets();
+    }
+
+    async function loadPets() {
+      const grid = document.getElementById('petsGrid');
+      grid.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+      
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + currentToken },
+          body: JSON.stringify({ action: 'getPets' })
+        });
+        const data = await response.json();
+        
+        if (data.error) {
+          grid.innerHTML = '<p>載入錯誤</p>';
+          return;
+        }
+        
+        let html = '';
+        
+        if (currentUser.role !== 'admin') {
+          html += `
+            <div class="pet-card add-pet-card" onclick="showAddPetModal()">
+              <div class="add-pet-icon">+</div>
+              <div class="add-pet-text">添加寵物</div>
+            </div>
+          `;
+        }
+        
+        data.pets.forEach(pet => {
+          const emoji = pet.type === 'cat' ? '🐱' : pet.type === 'bird' ? '🐦' : pet.type === 'rabbit' ? '🐰' : '🐕';
+          html += `
+            <div class="pet-card" onclick="showPetDetail('${pet.petId}')">
+              <div class="pet-card-image">${emoji}</div>
+              <div class="pet-card-content">
+                <div class="pet-card-name">${pet.name}</div>
+                <div class="pet-card-info">${pet.type || '未知'} · ${pet.breed || '未知'}</div>
+              </div>
+            </div>
+          `;
+        });
+        
+        grid.innerHTML = html || '<p style="text-align:center;color:var(--text-light)">還沒有寵物，點擊添加</p>';
+      } catch (err) {
+        grid.innerHTML = '<p>載入錯誤</p>';
+      }
+    }
+
+    function showAdmin() {
+      document.getElementById('dashboardView').classList.add('hidden');
+      document.getElementById('adminView').classList.remove('hidden');
+      loadAdminTab('users');
+    }
+
+    async function loadAdminTab(tab) {
+      const content = document.getElementById('adminContent');
+      content.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+      
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + currentToken },
+          body: JSON.stringify({ action: 'adminGetUsers' })
+        });
+        const data = await response.json();
+        
+        if (tab === 'users') {
+          let html = `
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>姓名</th>
+                  <th>電郵</th>
+                  <th>角色</th>
+                  <th>創建時間</th>
+                </tr>
+              </thead>
+              <tbody>
+          `;
+          
+          data.users.forEach(user => {
+            html += `
+              <tr>
+                <td>${user.name}</td>
+                <td>${user.email}</td>
+                <td><span class="badge ${user.role === 'admin' ? 'badge-admin' : 'badge-user'}">${user.role}</span></td>
+                <td>${new Date(user.createdAt).toLocaleDateString()}</td>
+              </tr>
+            `;
+          });
+          
+          html += '</tbody></table>';
+          content.innerHTML = html;
+        } else if (tab === 'allData') {
+          const allData = await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + currentToken },
+            body: JSON.stringify({ action: 'adminGetAllData' })
+          }).then(r => r.json());
+          
+          content.innerHTML = `
+            <h3>📊 數據概覽</h3>
+            <p>用戶: ${allData.Users?.length || 0}</p>
+            <p>寵物: ${allData.Pets?.length || 0}</p>
+            <p>事件: ${allData.Events?.length || 0}</p>
+            <p>食物記錄: ${allData.FoodLogs?.length || 0}</p>
+            <p>大便記錄: ${allData.PoopLogs?.length || 0}</p>
+            <p>健康記錄: ${allData.HealthLogs?.length || 0}</p>
+          `;
+        }
+      } catch (err) {
+        content.innerHTML = '<p>載入錯誤</p>';
+      }
+    }
+
+    // ============== PET DETAIL ==============
+    async function showPetDetail(petId) {
+      document.getElementById('dashboardView').classList.add('hidden');
+      document.getElementById('petDetailView').classList.remove('hidden');
+      
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + currentToken },
+          body: JSON.stringify({ action: 'getPets' })
+        });
+        const data = await response.json();
+        const pet = data.pets.find(p => p.petId === petId);
+        
+        if (pet) {
+          currentPet = pet;
+          const emoji = pet.type === 'cat' ? '🐱' : pet.type === 'bird' ? '🐦' : pet.type === 'rabbit' ? '🐰' : '🐕';
+          document.getElementById('petDetailImage').textContent = emoji;
+          document.getElementById('petDetailName').textContent = pet.name;
+          document.getElementById('petDetailInfo').textContent = `${pet.type || '未知'} · ${pet.breed || '未知'}`;
+          
+          // Show delete button only for owner or admin
+          if (currentUser.role === 'admin' || currentUser.userId === pet.userId) {
+            document.getElementById('deletePetBtn').classList.remove('hidden');
+          } else {
+            document.getElementById('deletePetBtn').classList.add('hidden');
+          }
+          
+          loadTab('calendar');
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function loadTab(tab) {
+      const content = document.getElementById('tabContent');
+      content.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+      
+      switch (tab) {
+        case 'calendar':
+          await loadCalendar(content);
+          break;
+        case 'food':
+          await loadFoodLogs(content);
+          break;
+        case 'poop':
+          await loadPoopLogs(content);
+          break;
+        case 'health':
+          await loadHealthLogs(content);
+          break;
+      }
+    }
+
+    // ============== CALENDAR TAB ==============
+    async function loadCalendar(container) {
+      container.innerHTML = `
+        <div class="calendar-header">
+          <h3 class="tab-title">📅 行事曆</h3>
+          <div class="calendar-nav">
+            <button class="btn btn-secondary btn-small" onclick="changeMonth(-1)">←</button>
+            <span class="calendar-month" id="calendarMonth"></span>
+            <button class="btn btn-secondary btn-small" onclick="changeMonth(1)">→</button>
+          </div>
+          <button class="btn btn-primary btn-small" onclick="showAddEventModal()">+ 添加事件</button>
+        </div>
+        <div class="calendar-grid" id="calendarGrid"></div>
+      `;
+      
+      await renderCalendar();
+    }
+
+    async function renderCalendar() {
+      const grid = document.getElementById('calendarGrid');
+      const monthLabel = document.getElementById('calendarMonth');
+      
+      const months = ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月'];
+      monthLabel.textContent = `${currentYear}年 ${months[currentMonth - 1]}`;
+      
+      // Get events for this month
+      let events = [];
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + currentToken },
+          body: JSON.stringify({ action: 'getEvents', petId: currentPet.petId, month: currentMonth, year: currentYear })
+        });
+        const data = await response.json();
+        events = data.events || [];
+      } catch (err) {}
+      
+      // Build calendar
+      const firstDay = new Date(currentYear, currentMonth - 1, 1).getDay();
+      const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
+      const daysInPrevMonth = new Date(currentYear, currentMonth - 1, 0).getDate();
+      
+      const today = new Date();
+      const isCurrentMonth = today.getMonth() + 1 === currentMonth && today.getFullYear() === currentYear;
+      
+      let html = ['日', '一', '二', '三', '四', '五', '六'].map(d => `<div class="calendar-day-header">${d}</div>`).join('');
+      
+      // Previous month days
+      for (let i = firstDay - 1; i >= 0; i--) {
+        html += `<div class="calendar-day other-month">${daysInPrevMonth - i}</div>`;
+      }
+      
+      // Current month days
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const dayEvents = events.filter(e => e.datetime && e.datetime.startsWith(dateStr));
+        
+        let classes = 'calendar-day';
+        if (isCurrentMonth && day === today.getDate()) classes += ' today';
+        
+        let dots = dayEvents.slice(0, 3).map(e => {
+          let type = '';
+          if (e.type === 'vet') type = 'vet';
+          else if (e.type === 'food') type = 'food';
+          else if (e.type === 'poop') type = 'poop';
+          return `<div class="event-dot ${type}"></div>`;
+        }).join('');
+        
+        html += `
+          <div class="${classes}" onclick="showDayEvents('${dateStr}')">
+            ${day}
+            ${dots}
+          </div>
+        `;
+      }
+      
+      // Next month days
+      const totalCells = Math.ceil((firstDay + daysInMonth) / 7) * 7;
+      for (let i = 1; i <= totalCells - firstDay - daysInMonth; i++) {
+        html += `<div class="calendar-day other-month">${i}</div>`;
+      }
+      
+      grid.innerHTML = html;
+    }
+
+    function changeMonth(delta) {
+      currentMonth += delta;
+      if (currentMonth > 12) {
+        currentMonth = 1;
+        currentYear++;
+      } else if (currentMonth < 1) {
+        currentMonth = 12;
+        currentYear--;
+      }
+      renderCalendar();
+    }
+
+    function showDayEvents(dateStr) {
+      // For simplicity, just show add event modal with prefilled date
+      showAddEventModal(dateStr);
+    }
+
+    // ============== FOOD LOGS TAB ==============
+    async function loadFoodLogs(container) {
+      container.innerHTML = `
+        <div class="calendar-header">
+          <h3 class="tab-title">🍖 飲食記錄</h3>
+          <button class="btn btn-primary btn-small" onclick="showAddFoodModal()">+ 添加</button>
+        </div>
+        <div class="log-list" id="foodLogList"></div>
+      `;
+      
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + currentToken },
+          body: JSON.stringify({ action: 'getFoodLogs', petId: currentPet.petId })
+        });
+        const data = await response.json();
+        
+        const list = document.getElementById('foodLogList');
+        if (!data.logs || data.logs.length === 0) {
+          list.innerHTML = '<p style="text-align:center;color:var(--text-light);padding:40px">還沒有飲食記錄</p>';
+          return;
+        }
+        
+        let html = '';
+        data.logs.slice().reverse().forEach(log => {
+          const dt = new Date(log.datetime);
+          html += `
+            <div class="log-item">
+              <div class="log-icon">🍖</div>
+              <div class="log-content">
+                <div class="log-title">${log.foodName}</div>
+                <div class="log-meta">${dt.toLocaleDateString()} ${dt.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
+              </div>
+              <div class="log-score neutral">${log.calories || 0} kcal</div>
+            </div>
+          `;
+        });
+        list.innerHTML = html;
+      } catch (err) {
+        document.getElementById('foodLogList').innerHTML = '<p>載入錯誤</p>';
+      }
+    }
+
+    // ============== POOP LOGS TAB ==============
+    async function loadPoopLogs(container) {
+      container.innerHTML = `
+        <div class="calendar-header">
+          <h3 class="tab-title">💩 大便記錄</h3>
+          <button class="btn btn-primary btn-small" onclick="showAddPoopModal()">+ 添加</button>
+        </div>
+        <div class="log-list" id="poopLogList"></div>
+      `;
+      
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + currentToken },
+          body: JSON.stringify({ action: 'getPoopLogs', petId: currentPet.petId })
+        });
+        const data = await response.json();
+        
+        const list = document.getElementById('poopLogList');
+        if (!data.logs || data.logs.length === 0) {
+          list.innerHTML = '<p style="text-align:center;color:var(--text-light);padding:40px">還沒有大便記錄</p>';
+          return;
+        }
+        
+        let html = '';
+        data.logs.slice().reverse().forEach(log => {
+          const dt = new Date(log.datetime);
+          const score = log.score || 0;
+          const scoreClass = score >= 4 ? 'good' : score <= 2 ? 'bad' : 'neutral';
+          const textureEmoji = log.texture === '水' ? '💦' : log.texture === '稀' ? '💧' : log.texture === '爛' ? '🌊' : log.texture === '軟團塊' ? '✅' : '❌';
+          
+          html += `
+            <div class="log-item">
+              <div class="log-icon">${textureEmoji}</div>
+              <div class="log-content">
+                <div class="log-title">${log.texture}</div>
+                <div class="log-meta">${dt.toLocaleDateString()} ${dt.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
+              </div>
+              <div class="log-score ${scoreClass}">${score}分</div>
+            </div>
+          `;
+        });
+        list.innerHTML = html;
+      } catch (err) {
+        document.getElementById('poopLogList').innerHTML = '<p>載入錯誤</p>';
+      }
+    }
+
+    // ============== HEALTH LOGS TAB ==============
+    async function loadHealthLogs(container) {
+      container.innerHTML = `
+        <div class="calendar-header">
+          <h3 class="tab-title">💊 健康記錄</h3>
+          <button class="btn btn-primary btn-small" onclick="showAddHealthModal()">+ 添加</button>
+        </div>
+        <div class="log-list" id="healthLogList"></div>
+      `;
+      
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + currentToken },
+          body: JSON.stringify({ action: 'getHealthLogs', petId: currentPet.petId })
+        });
+        const data = await response.json();
+        
+        const list = document.getElementById('healthLogList');
+        if (!data.logs || data.logs.length === 0) {
+          list.innerHTML = '<p style="text-align:center;color:var(--text-light);padding:40px">還沒有健康記錄</p>';
+          return;
+        }
+        
+        let html = '';
+        data.logs.slice().reverse().forEach(log => {
+          const dt = new Date(log.datetime);
+          html += `
+            <div class="log-item">
+              <div class="log-icon">💊</div>
+              <div class="log-content">
+                <div class="log-title">${log.symptoms || '健康檢查'}</div>
+                <div class="log-meta">${dt.toLocaleDateString()} ${dt.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
+                ${log.weight ? `<div class="log-meta">體重: ${log.weight}kg</div>` : ''}
+              </div>
+            </div>
+          `;
+        });
+        list.innerHTML = html;
+      } catch (err) {
+        document.getElementById('healthLogList').innerHTML = '<p>載入錯誤</p>';
+      }
+    }
+
+    // ============== MODALS ==============
+    function showModal(content) {
+      document.getElementById('modalContent').innerHTML = content;
+      document.getElementById('modalOverlay').classList.remove('hidden');
+    }
+
+    function closeModal(e) {
+      if (e.target === document.getElementById('modalOverlay')) {
+        document.getElementById('modalOverlay').classList.add('hidden');
+      }
+    }
+
+    function showAddPetModal() {
+      showModal(`
+        <h2 class="modal-title">添加寵物</h2>
+        <form onsubmit="handleAddPet(event)">
+          <div class="form-group">
+            <label class="form-label">寵物名 *</label>
+            <input type="text" class="form-input" id="petName" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">種類</label>
+            <select class="form-select" id="petType">
+              <option value="dog">🐕 狗</option>
+              <option value="cat">🐱 貓</option>
+              <option value="bird">🐦 鳥</option>
+              <option value="rabbit">🐰 兔</option>
+              <option value="other">其他</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">品種</label>
+            <input type="text" class="form-input" id="petBreed">
+          </div>
+          <div class="form-group">
+            <label class="form-label">出生日期</label>
+            <input type="date" class="form-input" id="petBirthDate">
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" onclick="document.getElementById('modalOverlay').classList.add('hidden')">取消</button>
+            <button type="submit" class="btn btn-primary">添加</button>
+          </div>
+        </form>
+      `);
+    }
+
+    async function handleAddPet(e) {
+      e.preventDefault();
+      
+      const name = document.getElementById('petName').value;
+      const type = document.getElementById('petType').value;
+      const breed = document.getElementById('petBreed').value;
+      const birthDate = document.getElementById('petBirthDate').value;
+      
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + currentToken },
+          body: JSON.stringify({ action: 'createPet', name, type, breed, birthDate })
+        });
+        const data = await response.json();
+        
+        if (data.error) {
+          showToast(data.error, 'error');
+        } else {
+          document.getElementById('modalOverlay').classList.add('hidden');
+          showToast('寵物添加成功！', 'success');
+          loadPets();
+        }
+      } catch (err) {
+        showToast('錯誤，請稍後再試', 'error');
+      }
+    }
+
+    async function deletePet() {
+      if (!confirm('確定要刪除這個寵物嗎？所有相關記錄都會被刪除。')) return;
+      
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + currentToken },
+          body: JSON.stringify({ action: 'deletePet', petId: currentPet.petId })
+        });
+        const data = await response.json();
+        
+        if (data.error) {
+          showToast(data.error, 'error');
+        } else {
+          showToast('寵物已刪除', 'success');
+          showDashboard();
+        }
+      } catch (err) {
+        showToast('錯誤，請稍後再試', 'error');
+      }
+    }
+
+    function showAddEventModal(prefilledDate) {
+      const today = prefilledDate || new Date().toISOString().split('T')[0];
+      showModal(`
+        <h2 class="modal-title">添加事件</h2>
+        <form onsubmit="handleAddEvent(event)">
+          <div class="form-group">
+            <label class="form-label">標題 *</label>
+            <input type="text" class="form-input" id="eventTitle" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">類型</label>
+            <select class="form-select" id="eventType">
+              <option value="vet">🏥 獸醫</option>
+              <option value="medicine">💊 藥物</option>
+              <option value="grooming">✂️ 梳毛/洗澡</option>
+              <option value="other">其他</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">日期時間 *</label>
+            <input type="datetime-local" class="form-input" id="eventDatetime" value="${today}T09:00" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">備註</label>
+            <textarea class="form-input" id="eventNotes" rows="3"></textarea>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" onclick="document.getElementById('modalOverlay').classList.add('hidden')">取消</button>
+            <button type="submit" class="btn btn-primary">添加</button>
+          </div>
+        </form>
+      `);
+    }
+
+    async function handleAddEvent(e) {
+      e.preventDefault();
+      
+      const title = document.getElementById('eventTitle').value;
+      const type = document.getElementById('eventType').value;
+      const datetime = document.getElementById('eventDatetime').value;
+      const notes = document.getElementById('eventNotes').value;
+      
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + currentToken },
+          body: JSON.stringify({ action: 'createEvent', petId: currentPet.petId, title, type, datetime, notes })
+        });
+        const data = await response.json();
+        
+        if (data.error) {
+          showToast(data.error, 'error');
+        } else {
+          document.getElementById('modalOverlay').classList.add('hidden');
+          showToast('事件添加成功！', 'success');
+          loadTab('calendar');
+        }
+      } catch (err) {
+        showToast('錯誤，請稍後再試', 'error');
+      }
+    }
+
+    function showAddFoodModal() {
+      showModal(`
+        <h2 class="modal-title">🍖 添加飲食記錄</h2>
+        <form onsubmit="handleAddFood(event)">
+          <div class="form-group">
+            <label class="form-label">食物名稱 *</label>
+            <input type="text" class="form-input" id="foodName" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">卡路里 (kcal)</label>
+            <input type="number" class="form-input" id="foodCalories" min="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">分量 (g)</label>
+            <input type="number" class="form-input" id="foodPortion" min="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">日期時間 *</label>
+            <input type="datetime-local" class="form-input" id="foodDatetime" value="${new Date().toISOString().slice(0,16)}" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">備註</label>
+            <textarea class="form-input" id="foodNotes" rows="2"></textarea>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" onclick="document.getElementById('modalOverlay').classList.add('hidden')">取消</button>
+            <button type="submit" class="btn btn-primary">添加</button>
+          </div>
+        </form>
+      `);
+    }
+
+    async function handleAddFood(e) {
+      e.preventDefault();
+      
+      const datetime = document.getElementById('foodDatetime').value;
+      const foodName = document.getElementById('foodName').value;
+      const calories = parseInt(document.getElementById('foodCalories').value) || 0;
+      const portion = parseInt(document.getElementById('foodPortion').value) || 0;
+      const notes = document.getElementById('foodNotes').value;
+      
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + currentToken },
+          body: JSON.stringify({ action: 'createFoodLog', petId: currentPet.petId, datetime, foodName, calories, portion, notes })
+        });
+        const data = await response.json();
+        
+        if (data.error) {
+          showToast(data.error, 'error');
+        } else {
+          document.getElementById('modalOverlay').classList.add('hidden');
+          showToast('飲食記錄添加成功！', 'success');
+          loadTab('food');
+        }
+      } catch (err) {
+        showToast('錯誤，請稍後再試', 'error');
+      }
+    }
+
+    function showAddPoopModal() {
+      showModal(`
+        <h2 class="modal-title">💩 添加大便記錄</h2>
+        <form onsubmit="handleAddPoop(event)">
+          <div class="form-group">
+            <label class="form-label">質地 *</label>
+            <select class="form-select" id="poopTexture" required>
+              <option value="水">💦 水 (腹瀉)</option>
+              <option value="稀">💧 稀</option>
+              <option value="爛">🌊 爛</option>
+              <option value="軟團塊">✅ 軟團塊 (理想)</option>
+              <option value="硬粒">❌ 硬粒 (便秘)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">評分</label>
+            <select class="form-select" id="poopScore">
+              <option value="7">7分 - 水樣</option>
+              <option value="6">6分 - 稀</option>
+              <option value="5">5分 - 爛</option>
+              <option value="4" selected>4分 - 理想</option>
+              <option value="3">3分 - 偏軟</option>
+              <option value="2">2分 - 硬</option>
+              <option value="1">1分 - 很硬/粒狀</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">日期時間 *</label>
+            <input type="datetime-local" class="form-input" id="poopDatetime" value="${new Date().toISOString().slice(0,16)}" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">備註</label>
+            <textarea class="form-input" id="poopNotes" rows="2"></textarea>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" onclick="document.getElementById('modalOverlay').classList.add('hidden')">取消</button>
+            <button type="submit" class="btn btn-primary">添加</button>
+          </div>
+        </form>
+      `);
+    }
+
+    async function handleAddPoop(e) {
+      e.preventDefault();
+      
+      const datetime = document.getElementById('poopDatetime').value;
+      const texture = document.getElementById('poopTexture').value;
+      const score = parseInt(document.getElementById('poopScore').value);
+      const notes = document.getElementById('poopNotes').value;
+      
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + currentToken },
+          body: JSON.stringify({ action: 'createPoopLog', petId: currentPet.petId, datetime, texture, score, notes })
+        });
+        const data = await response.json();
+        
+        if (data.error) {
+          showToast(data.error, 'error');
+        } else {
+          document.getElementById('modalOverlay').classList.add('hidden');
+          showToast('大便記錄添加成功！', 'success');
+          loadTab('poop');
+        }
+      } catch (err) {
+        showToast('錯誤，請稍後再試', 'error');
+      }
+    }
+
+    function showAddHealthModal() {
+      showModal(`
+        <h2 class="modal-title">💊 添加健康記錄</h2>
+        <form onsubmit="handleAddHealth(event)">
+          <div class="form-group">
+            <label class="form-label">類型</label>
+            <select class="form-select" id="healthType">
+              <option value="體檢">🏥 體檢</option>
+              <option value="疫苗">💉 疫苗</option>
+              <option value="驅蟲">🪱 驅蟲</option>
+              <option value="症狀">🤒 症狀</option>
+              <option value="其他">其他</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">體重 (kg)</label>
+            <input type="number" class="form-input" id="healthWeight" step="0.1" min="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">症狀/說明</label>
+            <textarea class="form-input" id="healthSymptoms" rows="2"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">日期時間 *</label>
+            <input type="datetime-local" class="form-input" id="healthDatetime" value="${new Date().toISOString().slice(0,16)}" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">備註</label>
+            <textarea class="form-input" id="healthNotes" rows="2"></textarea>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" onclick="document.getElementById('modalOverlay').classList.add('hidden')">取消</button>
+            <button type="submit" class="btn btn-primary">添加</button>
+          </div>
+        </form>
+      `);
+    }
+
+    async function handleAddHealth(e) {
+      e.preventDefault();
+      
+      const datetime = document.getElementById('healthDatetime').value;
+      const symptoms = document.getElementById('healthSymptoms').value;
+      const weight = parseFloat(document.getElementById('healthWeight').value) || 0;
+      const notes = document.getElementById('healthNotes').value;
+      
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + currentToken },
+          body: JSON.stringify({ action: 'createHealthLog', petId: currentPet.petId, datetime, symptoms, weight, notes })
+        });
+        const data = await response.json();
+        
+        if (data.error) {
+          showToast(data.error, 'error');
+        } else {
+          document.getElementById('modalOverlay').classList.add('hidden');
+          showToast('健康記錄添加成功！', 'success');
+          loadTab('health');
+        }
+      } catch (err) {
+        showToast('錯誤，請稍後再試', 'error');
+      }
+    }
+
+    // ============== TOAST ==============
+    function showToast(message, type = 'info') {
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.remove();
+      }, 3000);
+    }
+  </script>
+</body>
+</html>
