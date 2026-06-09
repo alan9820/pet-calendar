@@ -11,7 +11,7 @@
  */
 
 // ============== CONFIG ==============
-const SPREADSHEET_ID = 'YOUR_SPREADSHEET_ID'; // 替換為你的 Google Sheet ID
+const SPREADSHEET_ID = '1YZtyCxhjJeNteKBGGjwDd9xO4PryVvbLYHE3yN3U1CU'; // 替換為你的 Google Sheet ID
 const ADMIN_EMAIL = 'alan.yoshiki@gmail.com'; // Admin email
 
 // ============== HELPERS ==============

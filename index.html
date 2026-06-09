@@ -828,7 +828,15 @@
   <script>
     // ============== CONFIG ==============
     // TODO: 替換為你的 Google Apps Script Web App URL
-    const API_URL = 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec';
+    // ==============================================
+    // IMPORTANT: Replace with your Google Apps Script Web App URL
+    // After setting up Apps Script (see SETUP.md):
+    // 1. Deploy > New deployment
+    // 2. Select type: Web App
+    // 3. Copy the Web App URL
+    // Example: https://script.google.com/macros/s/XXXXX/exec
+    // ==============================================
+    let API_URL = '';
     
     // ============== STATE ==============
     let currentUser = null;
