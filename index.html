@@ -1013,6 +1013,177 @@
       await loadDashCalendar();
     }
 
+    // ============== DASHBOARD CALENDAR ==============
+    let dashMonth = new Date().getMonth() + 1;
+    let dashYear = new Date().getFullYear();
+    let dashAllEvents = [];
+    let dashPetsMap = {};
+    
+    function switchDashTab(tab) {
+      document.querySelectorAll('[data-dash-tab]').forEach(t => t.classList.remove('active'));
+      document.querySelector('[data-dash-tab="' + tab + '"]').classList.add('active');
+      
+      if (tab === 'calendar') {
+        document.getElementById('dashboardCalendar').classList.remove('hidden');
+        document.getElementById('dashboardPets').classList.add('hidden');
+      } else {
+        document.getElementById('dashboardCalendar').classList.add('hidden');
+        document.getElementById('dashboardPets').classList.remove('hidden');
+        loadPets();
+      }
+    }
+    
+    function changeDashMonth(delta) {
+      dashMonth += delta;
+      if (dashMonth > 12) {
+        dashMonth = 1;
+        dashYear++;
+      } else if (dashMonth < 1) {
+        dashMonth = 12;
+        dashYear--;
+      }
+      renderDashCalendar();
+    }
+    
+    async function loadDashCalendar() {
+      try {
+        // Load all events for the current month
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'getEvents', month: dashMonth, year: dashYear, token: currentToken })
+        });
+        const data = await response.json();
+        dashAllEvents = data.events || [];
+        
+        // Also get all pets to know pet names
+        const petsResponse = await fetch(API_URL, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'getPets', token: currentToken })
+        });
+        const petsData = await petsResponse.json();
+        dashPetsMap = {};
+        (petsData.pets || []).forEach(p => dashPetsMap[p.petId] = p.name);
+        
+        renderDashCalendar();
+      } catch (err) {
+        console.error('Error loading dashboard calendar:', err);
+      }
+    }
+    
+    function renderDashCalendar() {
+      const grid = document.getElementById('dashCalendarGrid');
+      const monthLabel = document.getElementById('dashCalendarMonth');
+      
+      if (!grid || !monthLabel) return;
+      
+      const months = ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月'];
+      monthLabel.textContent = dashYear + '年 ' + months[dashMonth - 1];
+      
+      const firstDay = new Date(dashYear, dashMonth - 1, 1).getDay();
+      const daysInMonth = new Date(dashYear, dashMonth, 0).getDate();
+      const daysInPrevMonth = new Date(dashYear, dashMonth - 1, 0).getDate();
+      
+      const today = new Date();
+      const isCurrentMonth = today.getMonth() + 1 === dashMonth && today.getFullYear() === dashYear;
+      
+      let html = ['日', '一', '二', '三', '四', '五', '六'].map(d => '<div class="calendar-day-header">' + d + '</div>').join('');
+      
+      // Previous month days
+      for (let i = firstDay - 1; i >= 0; i--) {
+        html += '<div class="calendar-day other-month">' + (daysInPrevMonth - i) + '</div>';
+      }
+      
+      // Current month days
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = dashYear + '-' + String(dashMonth).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+        const dayEvents = dashAllEvents.filter(e => e.datetime && e.datetime.startsWith(dateStr));
+        
+        let classes = 'calendar-day';
+        if (isCurrentMonth && day === today.getDate()) classes += ' today';
+        
+        let eventsHtml = dayEvents.slice(0, 2).map(e => {
+          const petName = dashPetsMap[e.petId] || '';
+          return '<div style="font-size:0.7em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + e.title + (petName ? ' (' + petName + ')' : '') + '</div>';
+        }).join('');
+        
+        if (dayEvents.length > 2) {
+          eventsHtml += '<div style="font-size:0.65em;color:var(--text-light)">+' + (dayEvents.length - 2) + ' 更多</div>';
+        }
+        
+        html += '<div class="' + classes + '" onclick="showDayEventsDashboard(\'' + dateStr + '\')">' + day + eventsHtml + '</div>';
+      }
+      
+      // Next month days
+      const totalCells = Math.ceil((firstDay + daysInMonth) / 7) * 7;
+      for (let i = 1; i <= totalCells - firstDay - daysInMonth; i++) {
+        html += '<div class="calendar-day other-month">' + i + '</div>';
+      }
+      
+      grid.innerHTML = html;
+    }
+    
+    function showDayEventsDashboard(dateStr) {
+      const dayEvents = dashAllEvents.filter(e => e.datetime && e.datetime.startsWith(dateStr));
+      if (dayEvents.length === 0) {
+        showQuickAddEvent(dateStr);
+      } else {
+        let eventsList = dayEvents.map(e => {
+          const petName = dashPetsMap[e.petId] || '';
+          const time = e.datetime ? new Date(e.datetime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '';
+          const emoji = e.type === 'vet' ? '🏥' : e.type === 'medicine' ? '💊' : '📅';
+          return '<div class="log-item" style="margin-bottom:8px"><div class="log-icon">' + emoji + '</div><div class="log-content"><div class="log-title">' + e.title + '</div><div class="log-meta">' + time + ' - ' + petName + '</div></div></div>';
+        }).join('');
+        
+        showModal('<h2 class="modal-title">📅 ' + dateStr + '</h2>' + eventsList + '<div class="modal-actions"><button class="btn btn-secondary" onclick="document.getElementById(\'modalOverlay\').classList.add(\'hidden\')">關閉</button><button class="btn btn-primary" onclick="showQuickAddEvent(\'' + dateStr + '\')">添加行程</button></div>');
+      }
+    }
+    
+    function showQuickAddEvent(prefilledDate) {
+      const today = prefilledDate || new Date().toISOString().split('T')[0];
+      
+      // Load pets into select first
+      fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'getPets', token: currentToken })
+      }).then(r => r.json()).then(data => {
+        let petsOptions = '<option value="">請選擇寵物...</option>';
+        (data.pets || []).forEach(pet => {
+          const emoji = pet.type === 'cat' ? '🐱' : pet.type === 'bird' ? '🐦' : pet.type === 'rabbit' ? '🐰' : '🐕';
+          petsOptions += '<option value="' + pet.petId + '">' + emoji + ' ' + pet.name + '</option>';
+        });
+        
+        showModal('<h2 class="modal-title">添加行程</h2><form onsubmit="handleQuickAddEvent(event)"><div class="form-group"><label class="form-label">選擇寵物 *</label><select class="form-select" id="quickPetId" required>' + petsOptions + '</select></div><div class="form-group"><label class="form-label">標題 *</label><input type="text" class="form-input" id="quickEventTitle" required></div><div class="form-group"><label class="form-label">類型</label><select class="form-select" id="quickEventType"><option value="vet">🏥 獸醫</option><option value="medicine">💊 藥物</option><option value="grooming">✂️ 梳毛/洗澡</option><option value="other">其他</option></select></div><div class="form-group"><label class="form-label">日期時間 *</label><input type="datetime-local" class="form-input" id="quickEventDatetime" value="' + today + 'T09:00" required></div><div class="form-group"><label class="form-label">備註</label><textarea class="form-input" id="quickEventNotes" rows="2"></textarea></div><div class="modal-actions"><button type="button" class="btn btn-secondary" onclick="document.getElementById(\'modalOverlay\').classList.add(\'hidden\')">取消</button><button type="submit" class="btn btn-primary">添加</button></div></form>');
+      });
+    }
+    
+    async function handleQuickAddEvent(e) {
+      e.preventDefault();
+      
+      const petId = document.getElementById('quickPetId').value;
+      const title = document.getElementById('quickEventTitle').value;
+      const type = document.getElementById('quickEventType').value;
+      const datetime = document.getElementById('quickEventDatetime').value;
+      const notes = document.getElementById('quickEventNotes').value;
+      
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'createEvent', petId, title, type, datetime, notes, token: currentToken })
+        });
+        const data = await response.json();
+        
+        if (data.error) {
+          showToast(data.error, 'error');
+        } else {
+          document.getElementById('modalOverlay').classList.add('hidden');
+          showToast('行程添加成功！', 'success');
+          await loadDashCalendar();
+        }
+      } catch (err) {
+        showToast('錯誤，請稍後再試', 'error');
+      }
+    }
+
     async function loadPets() {
       const grid = document.getElementById('petsGrid');
       grid.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
