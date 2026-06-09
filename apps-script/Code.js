@@ -74,12 +74,10 @@ function returnJSON(response, status, data) {
   return output;
 }
 
-// ============== DOGET ==============
-function doGet(e) {
-  return HtmlService.createHtmlOutputFromFile('Index')
-    .setTitle('Pet Calendar')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-}
+// ============== API ROUTES ==============
+// Note: doGet removed - frontend is served from GitHub Pages
+// If you want to serve frontend from Apps Script instead, add:
+// function doGet(e) { return HtmlService.createHtmlOutputFromFile('Index')... }
 
 // ============== API ROUTES ==============
 function doPost(e) {
