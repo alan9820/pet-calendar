@@ -1215,9 +1215,10 @@
         
         data.pets.forEach(pet => {
           const emoji = pet.type === 'cat' ? '🐱' : pet.type === 'bird' ? '🐦' : pet.type === 'rabbit' ? '🐰' : '🐕';
+          const photoHtml = pet.photoUrl ? `<img src="${pet.photoUrl}" style="width:100%;height:100%;object-fit:cover;">` : emoji;
           html += `
             <div class="pet-card" onclick="showPetDetail('${pet.petId}')">
-              <div class="pet-card-image">${emoji}</div>
+              <div class="pet-card-image">${photoHtml}</div>
               <div class="pet-card-content">
                 <div class="pet-card-name">${pet.name}</div>
                 <div class="pet-card-info">${pet.type || '未知'} · ${pet.breed || '未知'}</div>
@@ -1318,7 +1319,11 @@
         if (pet) {
           currentPet = pet;
           const emoji = pet.type === 'cat' ? '🐱' : pet.type === 'bird' ? '🐦' : pet.type === 'rabbit' ? '🐰' : '🐕';
-          document.getElementById('petDetailImage').textContent = emoji;
+          if (pet.photoUrl) {
+            document.getElementById('petDetailImage').innerHTML = `<img src="${pet.photoUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+          } else {
+            document.getElementById('petDetailImage').textContent = emoji;
+          }
           document.getElementById('petDetailName').textContent = pet.name;
           document.getElementById('petDetailInfo').textContent = `${pet.type || '未知'} · ${pet.breed || '未知'}`;
           
@@ -1618,6 +1623,11 @@
         <h2 class="modal-title">添加寵物</h2>
         <form onsubmit="handleAddPet(event)">
           <div class="form-group">
+            <label class="form-label">頭像照片</label>
+            <input type="file" class="form-input" id="petPhoto" accept="image/*" onchange="previewPetPhoto(this, 'petPhotoPreview')">
+            <img id="petPhotoPreview" style="max-width:100px;max-height:100px;margin-top:8px;border-radius:8px;display:none;">
+          </div>
+          <div class="form-group">
             <label class="form-label">寵物名 *</label>
             <input type="text" class="form-input" id="petName" required>
           </div>
@@ -1654,11 +1664,18 @@
       const type = document.getElementById('petType').value;
       const breed = document.getElementById('petBreed').value;
       const birthDate = document.getElementById('petBirthDate').value;
+      const photoInput = document.getElementById('petPhoto');
+      
+      let photoUrl = '';
+      if (photoInput.files.length > 0) {
+        showToast('上傳照片中...', 'info');
+        photoUrl = await uploadPetPhoto(photoInput.files[0]);
+      }
       
       try {
         const response = await fetch(API_URL, {
           method: 'POST',
-          body: JSON.stringify({ action: 'createPet', token: currentToken, name, type, breed, birthDate })
+          body: JSON.stringify({ action: 'createPet', token: currentToken, name, type, breed, birthDate, photoUrl })
         });
         const data = await response.json();
         
@@ -1697,9 +1714,15 @@
 
     function showEditPetModal() {
       if (!currentPet) return;
+      const currentPhoto = currentPet.photoUrl || '';
       showModal(`
         <h2 class="modal-title">編輯寵物</h2>
         <form onsubmit="handleEditPet(event)">
+          <div class="form-group">
+            <label class="form-label">頭像照片</label>
+            <input type="file" class="form-input" id="editPetPhoto" accept="image/*" onchange="previewPetPhoto(this, 'editPetPhotoPreview')">
+            <img id="editPetPhotoPreview" src="${currentPhoto}" style="max-width:100px;max-height:100px;margin-top:8px;border-radius:8px;${currentPhoto ? '' : 'display:none;'}">
+          </div>
           <div class="form-group">
             <label class="form-label">寵物名 *</label>
             <input type="text" class="form-input" id="editPetName" value="${currentPet.name || ''}" required>
@@ -1737,11 +1760,18 @@
       const type = document.getElementById('editPetType').value;
       const breed = document.getElementById('editPetBreed').value;
       const birthDate = document.getElementById('editPetBirthDate').value;
+      const photoInput = document.getElementById('editPetPhoto');
+      
+      let photoUrl = currentPet.photoUrl || '';
+      if (photoInput.files.length > 0) {
+        showToast('上傳照片中...', 'info');
+        photoUrl = await uploadPetPhoto(photoInput.files[0]);
+      }
       
       try {
         const response = await fetch(API_URL, {
           method: 'POST',
-          body: JSON.stringify({ action: 'updatePet', token: currentToken, petId: currentPet.petId, name, type, breed, birthDate })
+          body: JSON.stringify({ action: 'updatePet', token: currentToken, petId: currentPet.petId, name, type, breed, birthDate, photoUrl })
         });
         const data = await response.json();
         
@@ -1755,9 +1785,14 @@
           currentPet.type = type;
           currentPet.breed = breed;
           currentPet.birthDate = birthDate;
+          currentPet.photoUrl = photoUrl;
           // Refresh pet detail view
-          const emoji = type === 'cat' ? '🐱' : type === 'bird' ? '🐦' : type === 'rabbit' ? '🐰' : '🐕';
-          document.getElementById('petDetailImage').textContent = emoji;
+          if (photoUrl) {
+            document.getElementById('petDetailImage').innerHTML = `<img src="${photoUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+          } else {
+            const emoji = type === 'cat' ? '🐱' : type === 'bird' ? '🐦' : type === 'rabbit' ? '🐰' : '🐕';
+            document.getElementById('petDetailImage').textContent = emoji;
+          }
           document.getElementById('petDetailName').textContent = name;
           document.getElementById('petDetailInfo').textContent = `${type || '未知'} · ${breed || '未知'}`;
           loadPets();
@@ -2220,6 +2255,42 @@ async function deleteUser(userId) {
   } catch (err) {
     showToast('錯誤，請稍後再試', 'error');
   }
+}
+
+// ============== PHOTO UPLOAD ==============
+function previewPetPhoto(input, previewId) {
+  const preview = document.getElementById(previewId);
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      preview.src = e.target.result;
+      preview.style.display = 'block';
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+async function uploadPetPhoto(file) {
+  return new Promise((resolve, reject) => {
+    const formData = new FormData();
+    formData.append('key', '6d207e02198a847aa98d0a2a901485a5');
+    formData.append('source', file);
+    formData.append('format', 'json');
+    
+    fetch('https://freeimage.host/api/1/upload', {
+      method: 'POST',
+      body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        resolve(data.image.url);
+      } else {
+        reject(new Error('Upload failed'));
+      }
+    })
+    .catch(reject);
+  });
 }
 
 // ============== TOAST ==============
