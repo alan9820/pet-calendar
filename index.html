@@ -765,12 +765,31 @@
 
     <!-- Dashboard -->
     <div class="container hidden" id="dashboardView">
-      <div class="dashboard-header">
-        <h1 class="dashboard-title">我的寵物</h1>
-        <button class="btn btn-secondary" onclick="showAddPetModal()" id="addPetBtn">+ 添加寵物</button>
+      <div class="dashboard-tabs" style="display:flex;gap:8px;margin-bottom:20px;">
+        <button class="tab active" data-dash-tab="calendar" onclick="switchDashTab('calendar')">📅 行事曆</button>
+        <button class="tab" data-dash-tab="pets" onclick="switchDashTab('pets')">🐾 寵物</button>
       </div>
-      <div class="pets-grid" id="petsGrid">
-        <!-- Pets loaded dynamically -->
+      
+      <div id="dashboardCalendar">
+        <div class="calendar-header">
+          <div class="calendar-nav">
+            <button class="btn btn-secondary btn-small" onclick="changeDashMonth(-1)">←</button>
+            <span class="calendar-month" id="dashCalendarMonth"></span>
+            <button class="btn btn-secondary btn-small" onclick="changeDashMonth(1)">→</button>
+          </div>
+          <button class="btn btn-primary btn-small" onclick="showQuickAddEvent()">+ 添加事件</button>
+        </div>
+        <div class="calendar-grid" id="dashCalendarGrid"></div>
+      </div>
+      
+      <div id="dashboardPets" class="hidden">
+        <div class="dashboard-header">
+          <h1 class="dashboard-title">我的寵物</h1>
+          <button class="btn btn-secondary" onclick="showAddPetModal()" id="addPetBtn">+ 添加寵物</button>
+        </div>
+        <div class="pets-grid" id="petsGrid">
+          <!-- Pets loaded dynamically -->
+        </div>
       </div>
     </div>
 
