@@ -11,8 +11,8 @@
  */
 
 // ============== CONFIG ==============
-const SPREADSHEET_ID = '1YZtyCxhjJeNteKBGGjwDd9xO4PryVvbLYHE3yN3U1CU'; // 替換為你的 Google Sheet ID
-const ADMIN_EMAIL = 'alan.yoshiki@gmail.com'; // Admin email
+const SPREADSHEET_ID = '1YZtyCxhjJeNteKBGGjwDd9xO4PryVvbLYHE3yN3U1CU';
+const ADMIN_EMAIL = 'alan.yoshiki@gmail.com';
 
 // ============== HELPERS ==============
 function getSheet(name) {
@@ -41,15 +41,14 @@ function parseJSON(body) {
   }
 }
 
-function requireAuth(headers) {
-  const token = headers['Authorization'];
-  if (!token || !token.startsWith('Bearer ')) {
-    return null;
-  }
-  return token.replace('Bearer ', '');
+function returnJSON(data) {
+  var output = ContentService.createTextOutput(JSON.stringify(data));
+  output.setMimeType(ContentService.MimeType.JSON);
+  return output;
 }
 
 function validateUser(token) {
+  if (!token) return null;
   const sheet = getSheet('Users');
   const data = sheet.getDataRange().getValues();
   const headers = data[0];
@@ -64,31 +63,16 @@ function validateUser(token) {
   return null;
 }
 
-function isAdmin(email) {
-  return email === ADMIN_EMAIL;
-}
-
-function returnJSON(response, status, data) {
-  var output = ContentService.createTextOutput(JSON.stringify(data));
-  output.setMimeType(ContentService.MimeType.JSON);
-  return output;
-}
-
-// ============== API ROUTES ==============
-// Note: doGet removed - frontend is served from GitHub Pages
-// If you want to serve frontend from Apps Script instead, add:
-// function doGet(e) { return HtmlService.createHtmlOutputFromFile('Index')... }
-
 // ============== API ROUTES ==============
 function doPost(e) {
-  const headers = e.parameter;
   const body = parseJSON(e.postData.contents);
   
   if (!body || !body.action) {
-    return returnJSON(null, 400, { error: 'Missing action' });
+    return returnJSON({ error: 'Missing action' });
   }
   
   const action = body.action;
+  const token = body.token || null;
   
   try {
     switch (action) {
@@ -97,57 +81,53 @@ function doPost(e) {
       case 'login':
         return handleLogin(body);
       case 'logout':
-        return handleLogout(body);
+        return returnJSON({ success: true });
       
       // Pets
       case 'getPets':
-        return handleGetPets(body, headers);
+        return handleGetPets(body, token);
       case 'createPet':
-        return handleCreatePet(body, headers);
-      case 'updatePet':
-        return handleUpdatePet(body, headers);
+        return handleCreatePet(body, token);
       case 'deletePet':
-        return handleDeletePet(body, headers);
+        return handleDeletePet(body, token);
       
       // Events
       case 'getEvents':
-        return handleGetEvents(body, headers);
+        return handleGetEvents(body, token);
       case 'createEvent':
-        return handleCreateEvent(body, headers);
-      case 'updateEvent':
-        return handleUpdateEvent(body, headers);
+        return handleCreateEvent(body, token);
       case 'deleteEvent':
-        return handleDeleteEvent(body, headers);
+        return handleDeleteEvent(body, token);
       
       // Food Logs
       case 'getFoodLogs':
-        return handleGetFoodLogs(body, headers);
+        return handleGetFoodLogs(body, token);
       case 'createFoodLog':
-        return handleCreateFoodLog(body, headers);
+        return handleCreateFoodLog(body, token);
       
       // Poop Logs
       case 'getPoopLogs':
-        return handleGetPoopLogs(body, headers);
+        return handleGetPoopLogs(body, token);
       case 'createPoopLog':
-        return handleCreatePoopLog(body, headers);
+        return handleCreatePoopLog(body, token);
       
       // Health Logs
       case 'getHealthLogs':
-        return handleGetHealthLogs(body, headers);
+        return handleGetHealthLogs(body, token);
       case 'createHealthLog':
-        return handleCreateHealthLog(body, headers);
+        return handleCreateHealthLog(body, token);
       
       // Admin
       case 'adminGetUsers':
-        return handleAdminGetUsers(body, headers);
+        return handleAdminGetUsers(token);
       case 'adminGetAllData':
-        return handleAdminGetAllData(body, headers);
+        return handleAdminGetAllData(token);
       
       default:
-        return returnJSON(null, 400, { error: 'Unknown action: ' + action });
+        return returnJSON({ error: 'Unknown action: ' + action });
     }
   } catch (error) {
-    return returnJSON(null, 500, { error: error.toString() });
+    return returnJSON({ error: error.toString() });
   }
 }
 
@@ -156,7 +136,7 @@ function handleRegister(body) {
   const { email, password, name } = body;
   
   if (!email || !password || !name) {
-    return returnJSON(null, 400, { error: 'Missing required fields' });
+    return returnJSON({ error: 'Missing required fields' });
   }
   
   const sheet = getSheet('Users');
@@ -168,21 +148,21 @@ function handleRegister(body) {
     const row = {};
     headers.forEach((h, idx) => row[h] = data[i][idx]);
     if (row.email === email) {
-      return returnJSON(null, 400, { error: 'Email already registered' });
+      return returnJSON({ error: 'Email already registered' });
     }
   }
   
   const userId = generateId();
   const passwordHash = hashPassword(password);
-  const token = generateId();
+  const newToken = generateId();
   const role = email === ADMIN_EMAIL ? 'admin' : 'user';
   
-  sheet.appendRow([userId, email, passwordHash, name, role, token, getTimestamp()]);
+  sheet.appendRow([userId, email, passwordHash, name, role, newToken, getTimestamp()]);
   
-  return returnJSON(null, 200, { 
+  return returnJSON({ 
     success: true, 
     user: { userId, email, name, role },
-    token 
+    token: newToken
   });
 }
 
@@ -190,7 +170,7 @@ function handleLogin(body) {
   const { email, password } = body;
   
   if (!email || !password) {
-    return returnJSON(null, 400, { error: 'Missing required fields' });
+    return returnJSON({ error: 'Missing required fields' });
   }
   
   const sheet = getSheet('Users');
@@ -203,31 +183,26 @@ function handleLogin(body) {
     if (row.email === email) {
       const passwordHash = hashPassword(password);
       if (row.passwordHash === passwordHash) {
-        const token = generateId();
-        // Update token
+        const newToken = generateId();
         const sheetRow = i + 1;
-        sheet.getRange(sheetRow, headers.indexOf('token') + 1).setValue(token);
+        sheet.getRange(sheetRow, headers.indexOf('token') + 1).setValue(newToken);
         
-        return returnJSON(null, 200, { 
+        return returnJSON({ 
           success: true, 
           user: { userId: row.userId, email: row.email, name: row.name, role: row.role },
-          token 
+          token: newToken
         });
       }
     }
   }
   
-  return returnJSON(null, 401, { error: 'Invalid credentials' });
-}
-
-function handleLogout(body) {
-  return returnJSON(null, 200, { success: true });
+  return returnJSON({ error: 'Invalid credentials' });
 }
 
 // ============== PET HANDLERS ==============
-function handleGetPets(body, headers) {
-  const user = validateUserAuth(headers);
-  if (!user) return returnJSON(null, 401, { error: 'Unauthorized' });
+function handleGetPets(body, token) {
+  const user = validateUser(token);
+  if (!user) return returnJSON({ error: 'Unauthorized' });
   
   const sheet = getSheet('Pets');
   const data = sheet.getDataRange().getValues();
@@ -242,59 +217,27 @@ function handleGetPets(body, headers) {
     }
   }
   
-  return returnJSON(null, 200, { pets });
+  return returnJSON({ pets });
 }
 
-function handleCreatePet(body, headers) {
-  const user = validateUserAuth(headers);
-  if (!user) return returnJSON(null, 401, { error: 'Unauthorized' });
+function handleCreatePet(body, token) {
+  const user = validateUser(token);
+  if (!user) return returnJSON({ error: 'Unauthorized' });
   
   const { name, type, breed, birthDate, photoUrl } = body;
-  if (!name) return returnJSON(null, 400, { error: 'Missing required fields' });
+  if (!name) return returnJSON({ error: 'Missing required fields' });
   
   const sheet = getSheet('Pets');
   const petId = generateId();
   
   sheet.appendRow([petId, user.userId, name, type || '', breed || '', birthDate || '', photoUrl || '', getTimestamp()]);
   
-  return returnJSON(null, 200, { success: true, pet: { petId, userId: user.userId, name, type, breed, birthDate, photoUrl } });
+  return returnJSON({ success: true, pet: { petId, userId: user.userId, name, type, breed, birthDate, photoUrl } });
 }
 
-function handleUpdatePet(body, headers) {
-  const user = validateUserAuth(headers);
-  if (!user) return returnJSON(null, 401, { error: 'Unauthorized' });
-  
-  const { petId, name, type, breed, birthDate, photoUrl } = body;
-  
-  const sheet = getSheet('Pets');
-  const data = sheet.getDataRange().getValues();
-  const headers_arr = data[0];
-  
-  for (let i = 1; i < data.length; i++) {
-    const row = {};
-    headers_arr.forEach((h, idx) => row[h] = data[i][idx]);
-    if (row.petId === petId) {
-      if (user.role !== 'admin' && row.userId !== user.userId) {
-        return returnJSON(null, 403, { error: 'Forbidden' });
-      }
-      
-      const sheetRow = i + 1;
-      if (name !== undefined) sheet.getRange(sheetRow, headers_arr.indexOf('name') + 1).setValue(name);
-      if (type !== undefined) sheet.getRange(sheetRow, headers_arr.indexOf('type') + 1).setValue(type);
-      if (breed !== undefined) sheet.getRange(sheetRow, headers_arr.indexOf('breed') + 1).setValue(breed);
-      if (birthDate !== undefined) sheet.getRange(sheetRow, headers_arr.indexOf('birthDate') + 1).setValue(birthDate);
-      if (photoUrl !== undefined) sheet.getRange(sheetRow, headers_arr.indexOf('photoUrl') + 1).setValue(photoUrl);
-      
-      return returnJSON(null, 200, { success: true });
-    }
-  }
-  
-  return returnJSON(null, 404, { error: 'Pet not found' });
-}
-
-function handleDeletePet(body, headers) {
-  const user = validateUserAuth(headers);
-  if (!user) return returnJSON(null, 401, { error: 'Unauthorized' });
+function handleDeletePet(body, token) {
+  const user = validateUser(token);
+  if (!user) return returnJSON({ error: 'Unauthorized' });
   
   const { petId } = body;
   
@@ -307,20 +250,20 @@ function handleDeletePet(body, headers) {
     headers_arr.forEach((h, idx) => row[h] = data[i][idx]);
     if (row.petId === petId) {
       if (user.role !== 'admin' && row.userId !== user.userId) {
-        return returnJSON(null, 403, { error: 'Forbidden' });
+        return returnJSON({ error: 'Forbidden' });
       }
       sheet.deleteRow(i + 1);
-      return returnJSON(null, 200, { success: true });
+      return returnJSON({ success: true });
     }
   }
   
-  return returnJSON(null, 404, { error: 'Pet not found' });
+  return returnJSON({ error: 'Pet not found' });
 }
 
 // ============== EVENT HANDLERS ==============
-function handleGetEvents(body, headers) {
-  const user = validateUserAuth(headers);
-  if (!user) return returnJSON(null, 401, { error: 'Unauthorized' });
+function handleGetEvents(body, token) {
+  const user = validateUser(token);
+  if (!user) return returnJSON({ error: 'Unauthorized' });
   
   const { petId, month, year } = body;
   
@@ -357,16 +300,16 @@ function handleGetEvents(body, headers) {
     }
   }
   
-  return returnJSON(null, 200, { events });
+  return returnJSON({ events });
 }
 
-function handleCreateEvent(body, headers) {
-  const user = validateUserAuth(headers);
-  if (!user) return returnJSON(null, 401, { error: 'Unauthorized' });
+function handleCreateEvent(body, token) {
+  const user = validateUser(token);
+  if (!user) return returnJSON({ error: 'Unauthorized' });
   
   const { petId, title, type, datetime, notes } = body;
   if (!petId || !title || !datetime) {
-    return returnJSON(null, 400, { error: 'Missing required fields' });
+    return returnJSON({ error: 'Missing required fields' });
   }
   
   const sheet = getSheet('Events');
@@ -374,38 +317,12 @@ function handleCreateEvent(body, headers) {
   
   sheet.appendRow([eventId, petId, title, type || 'other', datetime, notes || '', getTimestamp()]);
   
-  return returnJSON(null, 200, { success: true, event: { eventId, petId, title, type, datetime, notes } });
+  return returnJSON({ success: true, event: { eventId, petId, title, type, datetime, notes } });
 }
 
-function handleUpdateEvent(body, headers) {
-  const user = validateUserAuth(headers);
-  if (!user) return returnJSON(null, 401, { error: 'Unauthorized' });
-  
-  const { eventId, title, type, datetime, notes } = body;
-  
-  const sheet = getSheet('Events');
-  const data = sheet.getDataRange().getValues();
-  const headers_arr = data[0];
-  
-  for (let i = 1; i < data.length; i++) {
-    const row = {};
-    headers_arr.forEach((h, idx) => row[h] = data[i][idx]);
-    if (row.eventId === eventId) {
-      const sheetRow = i + 1;
-      if (title !== undefined) sheet.getRange(sheetRow, headers_arr.indexOf('title') + 1).setValue(title);
-      if (type !== undefined) sheet.getRange(sheetRow, headers_arr.indexOf('type') + 1).setValue(type);
-      if (datetime !== undefined) sheet.getRange(sheetRow, headers_arr.indexOf('datetime') + 1).setValue(datetime);
-      if (notes !== undefined) sheet.getRange(sheetRow, headers_arr.indexOf('notes') + 1).setValue(notes);
-      return returnJSON(null, 200, { success: true });
-    }
-  }
-  
-  return returnJSON(null, 404, { error: 'Event not found' });
-}
-
-function handleDeleteEvent(body, headers) {
-  const user = validateUserAuth(headers);
-  if (!user) return returnJSON(null, 401, { error: 'Unauthorized' });
+function handleDeleteEvent(body, token) {
+  const user = validateUser(token);
+  if (!user) return returnJSON({ error: 'Unauthorized' });
   
   const { eventId } = body;
   
@@ -418,17 +335,17 @@ function handleDeleteEvent(body, headers) {
     headers_arr.forEach((h, idx) => row[h] = data[i][idx]);
     if (row.eventId === eventId) {
       sheet.deleteRow(i + 1);
-      return returnJSON(null, 200, { success: true });
+      return returnJSON({ success: true });
     }
   }
   
-  return returnJSON(null, 404, { error: 'Event not found' });
+  return returnJSON({ error: 'Event not found' });
 }
 
 // ============== FOOD LOG HANDLERS ==============
-function handleGetFoodLogs(body, headers) {
-  const user = validateUserAuth(headers);
-  if (!user) return returnJSON(null, 401, { error: 'Unauthorized' });
+function handleGetFoodLogs(body, token) {
+  const user = validateUser(token);
+  if (!user) return returnJSON({ error: 'Unauthorized' });
   
   const { petId } = body;
   
@@ -445,16 +362,16 @@ function handleGetFoodLogs(body, headers) {
     logs.push(row);
   }
   
-  return returnJSON(null, 200, { logs });
+  return returnJSON({ logs });
 }
 
-function handleCreateFoodLog(body, headers) {
-  const user = validateUserAuth(headers);
-  if (!user) return returnJSON(null, 401, { error: 'Unauthorized' });
+function handleCreateFoodLog(body, token) {
+  const user = validateUser(token);
+  if (!user) return returnJSON({ error: 'Unauthorized' });
   
   const { petId, datetime, foodName, calories, portion, notes } = body;
   if (!petId || !datetime || !foodName) {
-    return returnJSON(null, 400, { error: 'Missing required fields' });
+    return returnJSON({ error: 'Missing required fields' });
   }
   
   const sheet = getSheet('FoodLogs');
@@ -462,13 +379,13 @@ function handleCreateFoodLog(body, headers) {
   
   sheet.appendRow([logId, petId, datetime, foodName, calories || 0, portion || 0, notes || '', getTimestamp()]);
   
-  return returnJSON(null, 200, { success: true, log: { logId, petId, datetime, foodName, calories, portion, notes } });
+  return returnJSON({ success: true, log: { logId, petId, datetime, foodName, calories, portion, notes } });
 }
 
 // ============== POOP LOG HANDLERS ==============
-function handleGetPoopLogs(body, headers) {
-  const user = validateUserAuth(headers);
-  if (!user) return returnJSON(null, 401, { error: 'Unauthorized' });
+function handleGetPoopLogs(body, token) {
+  const user = validateUser(token);
+  if (!user) return returnJSON({ error: 'Unauthorized' });
   
   const { petId } = body;
   
@@ -485,16 +402,16 @@ function handleGetPoopLogs(body, headers) {
     logs.push(row);
   }
   
-  return returnJSON(null, 200, { logs });
+  return returnJSON({ logs });
 }
 
-function handleCreatePoopLog(body, headers) {
-  const user = validateUserAuth(headers);
-  if (!user) return returnJSON(null, 401, { error: 'Unauthorized' });
+function handleCreatePoopLog(body, token) {
+  const user = validateUser(token);
+  if (!user) return returnJSON({ error: 'Unauthorized' });
   
   const { petId, datetime, texture, score, notes } = body;
   if (!petId || !datetime || !texture) {
-    return returnJSON(null, 400, { error: 'Missing required fields' });
+    return returnJSON({ error: 'Missing required fields' });
   }
   
   const sheet = getSheet('PoopLogs');
@@ -502,13 +419,13 @@ function handleCreatePoopLog(body, headers) {
   
   sheet.appendRow([logId, petId, datetime, texture, score || 0, notes || '', getTimestamp()]);
   
-  return returnJSON(null, 200, { success: true, log: { logId, petId, datetime, texture, score, notes } });
+  return returnJSON({ success: true, log: { logId, petId, datetime, texture, score, notes } });
 }
 
 // ============== HEALTH LOG HANDLERS ==============
-function handleGetHealthLogs(body, headers) {
-  const user = validateUserAuth(headers);
-  if (!user) return returnJSON(null, 401, { error: 'Unauthorized' });
+function handleGetHealthLogs(body, token) {
+  const user = validateUser(token);
+  if (!user) return returnJSON({ error: 'Unauthorized' });
   
   const { petId } = body;
   
@@ -525,16 +442,16 @@ function handleGetHealthLogs(body, headers) {
     logs.push(row);
   }
   
-  return returnJSON(null, 200, { logs });
+  return returnJSON({ logs });
 }
 
-function handleCreateHealthLog(body, headers) {
-  const user = validateUserAuth(headers);
-  if (!user) return returnJSON(null, 401, { error: 'Unauthorized' });
+function handleCreateHealthLog(body, token) {
+  const user = validateUser(token);
+  if (!user) return returnJSON({ error: 'Unauthorized' });
   
   const { petId, datetime, weight, symptoms, notes } = body;
   if (!petId || !datetime) {
-    return returnJSON(null, 400, { error: 'Missing required fields' });
+    return returnJSON({ error: 'Missing required fields' });
   }
   
   const sheet = getSheet('HealthLogs');
@@ -542,14 +459,14 @@ function handleCreateHealthLog(body, headers) {
   
   sheet.appendRow([logId, petId, datetime, weight || 0, symptoms || '', notes || '', getTimestamp()]);
   
-  return returnJSON(null, 200, { success: true, log: { logId, petId, datetime, weight, symptoms, notes } });
+  return returnJSON({ success: true, log: { logId, petId, datetime, weight, symptoms, notes } });
 }
 
 // ============== ADMIN HANDLERS ==============
-function handleAdminGetUsers(body, headers) {
-  const user = validateUserAuth(headers);
+function handleAdminGetUsers(token) {
+  const user = validateUser(token);
   if (!user || user.role !== 'admin') {
-    return returnJSON(null, 403, { error: 'Admin only' });
+    return returnJSON({ error: 'Admin only' });
   }
   
   const sheet = getSheet('Users');
@@ -563,13 +480,13 @@ function handleAdminGetUsers(body, headers) {
     users.push(row);
   }
   
-  return returnJSON(null, 200, { users });
+  return returnJSON({ users });
 }
 
-function handleAdminGetAllData(body, headers) {
-  const user = validateUserAuth(headers);
+function handleAdminGetAllData(token) {
+  const user = validateUser(token);
   if (!user || user.role !== 'admin') {
-    return returnJSON(null, 403, { error: 'Admin only' });
+    return returnJSON({ error: 'Admin only' });
   }
   
   const sheetNames = ['Users', 'Pets', 'Events', 'FoodLogs', 'PoopLogs', 'HealthLogs'];
@@ -590,24 +507,13 @@ function handleAdminGetAllData(body, headers) {
     allData[name] = rows;
   });
   
-  return returnJSON(null, 200, allData);
-}
-
-// Helper function to validate user from headers
-function validateUserAuth(headers) {
-  const authHeader = headers['Authorization'] || headers['authorization'];
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return null;
-  }
-  const token = authHeader.replace('Bearer ', '');
-  return validateUser(token);
+  return returnJSON(allData);
 }
 
 // ============== SETUP FUNCTION ==============
 function setupSpreadsheet() {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   
-  // Create sheets if they don't exist
   const sheetNames = ['Users', 'Pets', 'Events', 'FoodLogs', 'PoopLogs', 'HealthLogs'];
   
   sheetNames.forEach(name => {
@@ -617,58 +523,33 @@ function setupSpreadsheet() {
     }
   });
   
-  // Setup Users sheet
   let usersSheet = ss.getSheetByName('Users');
   if (usersSheet.getLastRow() === 0) {
     usersSheet.getRange(1, 1, 1, 7).setValues([['userId', 'email', 'passwordHash', 'name', 'role', 'token', 'createdAt']]);
   }
   
-  // Setup Pets sheet
   let petsSheet = ss.getSheetByName('Pets');
   if (petsSheet.getLastRow() === 0) {
     petsSheet.getRange(1, 1, 1, 8).setValues([['petId', 'userId', 'name', 'type', 'breed', 'birthDate', 'photoUrl', 'createdAt']]);
   }
   
-  // Setup Events sheet
   let eventsSheet = ss.getSheetByName('Events');
   if (eventsSheet.getLastRow() === 0) {
     eventsSheet.getRange(1, 1, 1, 7).setValues([['eventId', 'petId', 'title', 'type', 'datetime', 'notes', 'createdAt']]);
   }
   
-  // Setup FoodLogs sheet
   let foodSheet = ss.getSheetByName('FoodLogs');
   if (foodSheet.getLastRow() === 0) {
     foodSheet.getRange(1, 1, 1, 8).setValues([['logId', 'petId', 'datetime', 'foodName', 'calories', 'portion', 'notes', 'createdAt']]);
   }
   
-  // Setup PoopLogs sheet
   let poopSheet = ss.getSheetByName('PoopLogs');
   if (poopSheet.getLastRow() === 0) {
     poopSheet.getRange(1, 1, 1, 7).setValues([['logId', 'petId', 'datetime', 'texture', 'score', 'notes', 'createdAt']]);
   }
   
-  // Setup HealthLogs sheet
   let healthSheet = ss.getSheetByName('HealthLogs');
   if (healthSheet.getLastRow() === 0) {
     healthSheet.getRange(1, 1, 1, 7).setValues([['logId', 'petId', 'datetime', 'weight', 'symptoms', 'notes', 'createdAt']]);
-  }
-  
-  // Create admin user
-  const adminEmail = ADMIN_EMAIL;
-  const adminPassword = 'admin123'; // 臨時密碼，稍後讓 admin 更改
-  
-  const usersData = usersSheet.getDataRange().getValues();
-  let adminExists = false;
-  for (let i = 1; i < usersData.length; i++) {
-    if (usersData[i][1] === adminEmail) {
-      adminExists = true;
-      break;
-    }
-  }
-  
-  if (!adminExists) {
-    const userId = generateId();
-    const passwordHash = hashPassword(adminPassword);
-    usersSheet.appendRow([userId, adminEmail, passwordHash, 'Admin', 'admin', '', getTimestamp()]);
   }
 }

@@ -1001,8 +1001,7 @@
       try {
         const response = await fetch(API_URL, {
           method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + currentToken },
-          body: JSON.stringify({ action: 'getPets' })
+          body: JSON.stringify({ action: 'getPets', token: currentToken })
         });
         const data = await response.json();
         
@@ -1054,8 +1053,7 @@
       try {
         const response = await fetch(API_URL, {
           method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + currentToken },
-          body: JSON.stringify({ action: 'adminGetUsers' })
+          body: JSON.stringify({ action: 'adminGetUsers', token: currentToken })
         });
         const data = await response.json();
         
@@ -1089,8 +1087,8 @@
         } else if (tab === 'allData') {
           const allData = await fetch(API_URL, {
             method: 'POST',
-            headers: { 'Authorization': 'Bearer ' + currentToken },
-            body: JSON.stringify({ action: 'adminGetAllData' })
+            headers: {}, // Token sent in body
+            body: JSON.stringify({ action: 'adminGetAllData', token: currentToken })
           }).then(r => r.json());
           
           content.innerHTML = `
@@ -1116,8 +1114,7 @@
       try {
         const response = await fetch(API_URL, {
           method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + currentToken },
-          body: JSON.stringify({ action: 'getPets' })
+          body: JSON.stringify({ action: 'getPets', token: currentToken })
         });
         const data = await response.json();
         const pet = data.pets.find(p => p.petId === petId);
@@ -1193,8 +1190,7 @@
       try {
         const response = await fetch(API_URL, {
           method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + currentToken },
-          body: JSON.stringify({ action: 'getEvents', petId: currentPet.petId, month: currentMonth, year: currentYear })
+          body: JSON.stringify({ action: 'getEvents', token: currentToken, petId: currentPet.petId, month: currentMonth, year: currentYear })
         });
         const data = await response.json();
         events = data.events || [];
@@ -1278,8 +1274,7 @@
       try {
         const response = await fetch(API_URL, {
           method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + currentToken },
-          body: JSON.stringify({ action: 'getFoodLogs', petId: currentPet.petId })
+          body: JSON.stringify({ action: 'getFoodLogs', token: currentToken, petId: currentPet.petId })
         });
         const data = await response.json();
         
@@ -1322,8 +1317,7 @@
       try {
         const response = await fetch(API_URL, {
           method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + currentToken },
-          body: JSON.stringify({ action: 'getPoopLogs', petId: currentPet.petId })
+          body: JSON.stringify({ action: 'getPoopLogs', token: currentToken, petId: currentPet.petId })
         });
         const data = await response.json();
         
@@ -1370,8 +1364,7 @@
       try {
         const response = await fetch(API_URL, {
           method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + currentToken },
-          body: JSON.stringify({ action: 'getHealthLogs', petId: currentPet.petId })
+          body: JSON.stringify({ action: 'getHealthLogs', token: currentToken, petId: currentPet.petId })
         });
         const data = await response.json();
         
@@ -1458,8 +1451,7 @@
       try {
         const response = await fetch(API_URL, {
           method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + currentToken },
-          body: JSON.stringify({ action: 'createPet', name, type, breed, birthDate })
+          body: JSON.stringify({ action: 'createPet', token: currentToken, name, type, breed, birthDate })
         });
         const data = await response.json();
         
@@ -1481,8 +1473,7 @@
       try {
         const response = await fetch(API_URL, {
           method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + currentToken },
-          body: JSON.stringify({ action: 'deletePet', petId: currentPet.petId })
+          body: JSON.stringify({ action: 'deletePet', token: currentToken, petId: currentPet.petId })
         });
         const data = await response.json();
         
@@ -1542,8 +1533,7 @@
       try {
         const response = await fetch(API_URL, {
           method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + currentToken },
-          body: JSON.stringify({ action: 'createEvent', petId: currentPet.petId, title, type, datetime, notes })
+          body: JSON.stringify({ action: 'createEvent', token: currentToken, petId: currentPet.petId, title, type, datetime, notes })
         });
         const data = await response.json();
         
@@ -1603,8 +1593,7 @@
       try {
         const response = await fetch(API_URL, {
           method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + currentToken },
-          body: JSON.stringify({ action: 'createFoodLog', petId: currentPet.petId, datetime, foodName, calories, portion, notes })
+          body: JSON.stringify({ action: 'createFoodLog', token: currentToken, petId: currentPet.petId, datetime, foodName, calories, portion, notes })
         });
         const data = await response.json();
         
@@ -1673,8 +1662,7 @@
       try {
         const response = await fetch(API_URL, {
           method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + currentToken },
-          body: JSON.stringify({ action: 'createPoopLog', petId: currentPet.petId, datetime, texture, score, notes })
+          body: JSON.stringify({ action: 'createPoopLog', token: currentToken, petId: currentPet.petId, datetime, texture, score, notes })
         });
         const data = await response.json();
         
@@ -1739,8 +1727,7 @@
       try {
         const response = await fetch(API_URL, {
           method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + currentToken },
-          body: JSON.stringify({ action: 'createHealthLog', petId: currentPet.petId, datetime, symptoms, weight, notes })
+          body: JSON.stringify({ action: 'createHealthLog', token: currentToken, petId: currentPet.petId, datetime, symptoms, weight, notes })
         });
         const data = await response.json();
         
